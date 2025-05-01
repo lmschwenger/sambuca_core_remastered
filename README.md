@@ -1,6 +1,6 @@
 # Sambuca Core
 
-[![Python Tests](https://github.com/csiro-aquatic-remote-sensing/sambuca_core/actions/workflows/python-tests.yml/badge.svg)](https://github.com/csiro-aquatic-remote-sensing/sambuca_core/actions/workflows/python-tests.yml)
+[![Python Tests](https://github.com/csiro-aquatic-remote-sensing/sambuca_core/actions/workflows/python-tests.yml/badge.svg)](https://github.com/lmschwenger/sambuca_core_remastered/actions/workflows/python-tests.yml)
 [![Documentation Status](https://readthedocs.org/projects/sambuca-core/badge/?version=latest)](https://sambuca-core.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://badge.fury.io/py/sambuca-core.svg)](https://badge.fury.io/py/sambuca-core)
 
