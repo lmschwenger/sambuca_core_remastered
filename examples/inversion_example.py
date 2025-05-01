@@ -85,7 +85,7 @@ results = process_image(
   #  batch_size=(50, 50),  # Process in 100x100 pixel tiles
   #  overlap=10, # 10-pixel overlap between tiles
     lut=lut,
-    n_processes=1,          # Single process
+    n_processes=4,          # Single process
     progress_bar=True
 )
 
