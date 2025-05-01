@@ -8,10 +8,7 @@ version = "2.0.0"
 description = "Core model components for the Semi-Analytical Model for Bathymetry, Un-mixing, and Concentration Assessment (SAMBUCA)"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "CSIRO Open Source Software Licence Agreement"}
-authors = [
-    {name = "CSIRO Aquatic Remote Sensing", email = "daniel.collins@csiro.au"}
-]
+
 keywords = ["hydrology", "modeling", "bathymetry", "remote-sensing"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -51,9 +48,6 @@ test = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/csiro-aquatic-remote-sensing/sambuca_core"
-"Documentation" = "https://sambuca-core.readthedocs.io/"
-"Bug Tracker" = "https://github.com/csiro-aquatic-remote-sensing/sambuca_core/issues"
 
 [tool.setuptools]
 packages = ["sambuca_core"]
