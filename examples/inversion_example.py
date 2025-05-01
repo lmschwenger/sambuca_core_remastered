@@ -9,6 +9,11 @@ from sambuca_core.inversion.pixel_processor import batch_process_image
 
 input_ = r"D:\Projects\work\sambuca_core_remastered\data\input\example_groensund.tif"
 output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', "bathymetry_result.tif")
+mask_input = ''
+if mask_input is not None:
+    with rasterio.open(mask_input) as src:
+        mask_image = src.read()
+        data_mask = (mask_image[0, ...] < 0.25)
 
 # Load the L2A image
 with rasterio.open(input_) as src:
@@ -76,7 +81,7 @@ print("Processing image...")
 results = process_image(
     rrs_image,
     params,
-    mask=rrs_image[~np.isnan(rrs_image)],
+    mask=data_mask,
   #  batch_size=(50, 50),  # Process in 100x100 pixel tiles
   #  overlap=10, # 10-pixel overlap between tiles
     lut=lut,
