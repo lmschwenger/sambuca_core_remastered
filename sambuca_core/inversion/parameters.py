@@ -217,3 +217,31 @@ class InversionParameters:
             initial_values.append((self.substrate_fraction[0] + self.substrate_fraction[1]) / 2)
 
         return initial_values
+
+    def update_from_siop_manager(self, siop_manager, sensor_name):
+        """Update parameters from a SIOPManager for a specific sensor.
+
+        Args:
+            siop_manager: SIOPManager instance.
+            sensor_name: Name of a registered sensor.
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            KeyError: If required SIOPs cannot be found.
+        """
+        # Get standard SIOPs
+        siops = siop_manager.get_standard_siops(sensor_name)
+
+        # Update parameters
+        self.wavelengths = siops['wavelengths']
+        self.a_water = siops['a_water']
+        self.a_ph_star = siops['a_ph_star']
+        self.substrate1 = siops['substrate1']
+
+        # Optional parameters
+        if 'substrate2' in siops:
+            self.substrate2 = siops['substrate2']
+
+        return self

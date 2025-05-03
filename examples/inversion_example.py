@@ -1,19 +1,16 @@
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 import rasterio
-from rasterio.plot import show
-import matplotlib.pyplot as plt
-from sambuca_core.inversion import InversionParameters, LookUpTable, process_image
-from sambuca_core.inversion.pixel_processor import batch_process_image
 
-input_ = r"D:\Projects\work\sambuca_core_remastered\data\input\example_groensund.tif"
-output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', "bathymetry_result.tif")
-mask_input = ''
-if mask_input is not None:
-    with rasterio.open(mask_input) as src:
-        mask_image = src.read()
-        data_mask = (mask_image[0, ...] < 0.25)
+import sambuca_core as sbc
+from sambuca_core.inversion import InversionParameters, LookUpTable, process_image
+
+input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
+siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
+output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_{os.path.basename(input_)}")
+mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI.tiff')
 
 # Load the L2A image
 with rasterio.open(input_) as src:
@@ -23,8 +20,11 @@ with rasterio.open(input_) as src:
 
     # For Sentinel-2 L2A products, the scaling factor is typically 10_000
     # (Check your specific product documentation to confirm)
-    scaling_factor = 10000.0
-
+    if metadata['dtype'] == 'float32':
+        scaling_factor = 1.0
+    else:
+        scaling_factor = 10000.0
+    print(f"{scaling_factor = }")
     # Convert INT16 to surface reflectance (dimensionless, 0-1)
     surface_reflectance = image_int16.astype(np.float32) / scaling_factor
 
@@ -37,38 +37,44 @@ with rasterio.open(input_) as src:
     rrs_image = np.transpose(rrs, (1, 2, 0))
 # Step 2: Set up the sensor information
 # The wavelengths should match your 5 bands (e.g., for Sentinel-2)
-band_wavelengths = np.array([490, 560, 665, 705, 740])  # Adjust these to match your sensor's bands
+if mask_input is not None and mask_input != '':
+    with rasterio.open(mask_input) as src:
+        mask_image = src.read()
+        data_mask = (mask_image[2, ...] > 0.75)
+else:
+    data_mask = np.ones_like(rrs_image[..., 0], dtype=bool)
+siop_manager = sbc.SIOPManager(siop_dir)
 
-# Step 3: Configure Sambuca parameters
-# You'll need the following data (pre-calculated or from field measurements):
-# - Water absorption coefficients at your band wavelengths
-# - Phytoplankton specific absorption at your band wavelengths
-# - Substrate reflectance spectra at your band wavelengths
+sentinel2_wavelengths = {
+    "B1": 442.7,  # Coastal aerosol
+    "B2": 492.4,  # Blue
+    "B3": 559.8,  # Green
+    "B4": 664.6,  # Red
+    "B5": 704.1,  # Vegetation red edge
+    "B6": 740.5,  # Vegetation red edge
+    "B7": 782.8,  # Vegetation red edge
+    "B8": 832.8,  # NIR
+    "B8A": 864.7, # Narrow NIR
+    "B9": 945.1,  # Water vapour
+    "B10": 1373.5, # SWIR - Cirrus
+    "B11": 1613.7, # SWIR
+    "B12": 2202.4  # SWIR
+}
 
-# Example values (you should replace these with actual measurements/data)
-a_water = np.array([0.016, 0.062, 0.401, 0.438, 0.465])  # Pure water absorption at your bands
-a_ph_star = np.array([0.034, 0.023, 0.012, 0.008, 0.005])  # Specific phytoplankton absorption
-substrate1 = np.array([0.10, 0.12, 0.08, 0.05, 0.03])  # e.g., sand reflectance
-substrate2 = np.array([0.05, 0.25, 0.03, 0.01, 0.01])  # e.g., seagrass reflectance
+bands_used = ["B2", "B3", "B4", "B5", "B6", "B7", "B8"]
+wavelengths_used = [sentinel2_wavelengths[w] for w in bands_used]
+# Register the sensors you work with
+siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
 
-# Create inversion parameters
+# Create inversion parameters for a specific sensor
 params = InversionParameters(
     # Parameters to invert for
-    depth=(0.1, 10.0),             # Water depth (m) - adjust min/max to expected range
-    chl=(0.1, 10.0),               # Chlorophyll concentration
-    substrate_fraction=(0.0, 1.0),  # Mix between two substrates
-    
-    # Fixed parameters
-    fixed_cdom=0.5,                # Fixed CDOM concentration
-    fixed_nap=1.0,                 # Fixed NAP concentration
-    
-    # Sensor and environment parameters
-    wavelengths=band_wavelengths,  # Your 5 band centers 
-    a_water=a_water,               # Water absorption coefficients
-    a_ph_star=a_ph_star,           # Specific phytoplankton absorption
-    substrate1=substrate1,         # First substrate reflectance
-    substrate2=substrate2,         # Second substrate reflectance
+    depth=(0.1, 10.0),
+    chl=(0.1, 10.0),
 )
+
+# Load SIOPs for this sensor
+params.update_from_siop_manager(siop_manager, "Sentinel-2")
 
 # Step 4A: Use LUT approach for faster processing
 print("Building lookup table...")
@@ -82,10 +88,10 @@ results = process_image(
     rrs_image,
     params,
     mask=data_mask,
-  #  batch_size=(50, 50),  # Process in 100x100 pixel tiles
-  #  overlap=10, # 10-pixel overlap between tiles
+    #  batch_size=(50, 50),  # Process in 100x100 pixel tiles
+    #  overlap=10, # 10-pixel overlap between tiles
     lut=lut,
-    n_processes=4,          # Single process
+    n_processes=4,  # Single process
     progress_bar=True
 )
 
