@@ -17,7 +17,7 @@ from scipy.spatial import cKDTree
 
 from ..forward_model import forward_model
 from .parameters import InversionParameters
-from .optimization import invert_spectrum
+from .optimization import invert_spectrum, multi_start_inversion
 
 
 class LookUpTable:
@@ -302,7 +302,9 @@ class LookUpTable:
             metric: str = 'rmse',
             refine: bool = True,
             n_best: int = 1,
-            use_kdtree: bool = True
+            use_kdtree: bool = True,
+            use_multi_start: bool = False,
+            n_starts: int = 5
     ) -> Dict[str, Any]:
         """Invert observed reflectance using the look-up table with optimized performance.
 
@@ -396,20 +398,34 @@ class LookUpTable:
         lookup_time = time.time() - start_time
 
         # Optional refinement using optimization
+        refine_start = time.time()
+
+        # Use the best LUT match as initial values
+        initial_values = list(best_params[0])
+
         if refine:
             refine_start = time.time()
 
             # Use the best LUT match as initial values
             initial_values = list(best_params[0])
 
-            # Run optimization
-            result = invert_spectrum(
-                observed_rrs,
-                self.inversion_parameters,
-                initial_values=initial_values,
-                method='L-BFGS-B',
-                options={'maxiter': 50}
-            )
+            # Run optimization (either single or multi-start)
+            if use_multi_start:
+                result = multi_start_inversion(
+                    observed_rrs,
+                    self.inversion_parameters,
+                    n_starts=n_starts,
+                    method='L-BFGS-B',
+                    options={'maxiter': 50}
+                )
+            else:
+                result = invert_spectrum(
+                    observed_rrs,
+                    self.inversion_parameters,
+                    initial_values=initial_values,
+                    method='L-BFGS-B',
+                    options={'maxiter': 50}
+                )
 
             refine_time = time.time() - refine_start
 

@@ -77,14 +77,10 @@ params = InversionParameters(
 params.update_from_siop_manager(siop_manager, "Sentinel-2")
 
 # Step 4A: Use LUT approach for faster processing
-use_lut = False
-if use_lut:
-    print("Building lookup table...")
-    lut = LookUpTable(params)
-    lut.build_table(grid_size=[30, 15, 10])  # Resolution for depth, chl, substrate_fraction
-    lut.save("bathymetry_lut.pkl")
-else:
-    lut = None
+print("Building lookup table...")
+lut = LookUpTable(params)
+lut.build_table(grid_size=[30, 15, 10])  # Resolution for depth, chl, substrate_fraction
+lut.save("bathymetry_lut.pkl")
 
 # Step 4B: Process the image
 print("Processing image...")
@@ -92,6 +88,8 @@ results = process_image(
     rrs_image,
     params,
     mask=data_mask,
+    use_multi_start=False,
+    n_start=3,
     #  batch_size=(50, 50),  # Process in 100x100 pixel tiles
     #  overlap=10, # 10-pixel overlap between tiles
     lut=lut,

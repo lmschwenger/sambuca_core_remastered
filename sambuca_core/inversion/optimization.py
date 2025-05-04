@@ -125,6 +125,7 @@ def multi_start_inversion(
         inversion_parameters: InversionParameters,
         objective_function: Callable = spectral_rmse,
         n_starts: int = 5,
+        initial_values: Optional[List[float]] = None,
         method: str = 'L-BFGS-B',
         options: Optional[Dict[str, Any]] = None,
 ) -> OptimizationResult:
@@ -138,6 +139,7 @@ def multi_start_inversion(
         inversion_parameters: Parameters for the inversion process.
         objective_function: Function to calculate the error.
         n_starts: Number of different starting points to try.
+        initial_values: Optional starting point to include among the random starts.
         method: Optimization method (see scipy.optimize.minimize).
         options: Additional options for the optimizer.
 
@@ -156,11 +158,27 @@ def multi_start_inversion(
     # Generate random starting points within bounds
     for _ in range(n_starts):
         # Generate random starting point
-        initial_values = []
+        current_initial_values = []
         for lower, upper in bounds:
-            initial_values.append(lower + np.random.random() * (upper - lower))
+            current_initial_values.append(lower + np.random.random() * (upper - lower))
 
         # Run inversion
+        result = invert_spectrum(
+            observed_rrs,
+            inversion_parameters,
+            objective_function=objective_function,
+            initial_values=current_initial_values,
+            method=method,
+            options=options
+        )
+
+        # Keep track of best result
+        if result.objective_value < best_error:
+            best_error = result.objective_value
+            best_result = result
+
+    # Try with the provided initial values if given
+    if initial_values is not None:
         result = invert_spectrum(
             observed_rrs,
             inversion_parameters,
@@ -170,7 +188,6 @@ def multi_start_inversion(
             options=options
         )
 
-        # Keep track of best result
         if result.objective_value < best_error:
             best_error = result.objective_value
             best_result = result

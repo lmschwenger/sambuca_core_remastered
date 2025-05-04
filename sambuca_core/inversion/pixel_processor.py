@@ -15,7 +15,7 @@ from numpy.typing import NDArray
 from tqdm import tqdm
 import time
 
-from .optimization import invert_spectrum
+from .optimization import invert_spectrum, multi_start_inversion
 from .parameters import InversionParameters
 from .lut import LookUpTable
 
@@ -25,6 +25,8 @@ def process_pixel(
         inversion_parameters: InversionParameters,
         lut: Optional[LookUpTable] = None,
         refinement: bool = True,
+        use_multi_start: bool = False,
+        n_starts: int = 5,
         **kwargs: Any,
 ) -> Dict[str, Any]:
     """Process a single pixel spectrum.
@@ -34,12 +36,14 @@ def process_pixel(
         inversion_parameters: Parameters for the inversion process.
         lut: Optional look-up table for faster inversion.
         refinement: Whether to refine LUT results with optimization.
+        use_multi_start: Whether to use multi-start inversion.
+        n_starts: Number of starting points for multi-start inversion.
         **kwargs: Additional arguments passed to invert_spectrum or lut.invert.
 
     Returns:
         Dictionary with inverted parameters and metadata.
     """
-    # Check for invalid pixel (e.g., negative values or NaNs)
+    # Check for invalid pixel
     if np.any(np.isnan(pixel_spectra)) or np.any(pixel_spectra < 0):
         return {
             'parameters': {p: float('nan') for p in inversion_parameters.get_inversion_parameter_names()},
@@ -52,50 +56,51 @@ def process_pixel(
     # Use LUT if provided
     if lut is not None:
         try:
-            return lut.invert(pixel_spectra, refine=refinement, **kwargs)
+            lut_result = lut.invert(pixel_spectra, refine=refinement, **kwargs)
+
+            # If using multi-start refinement after LUT
+            if refinement and use_multi_start:
+                # Use LUT result as one of the starting points
+                lut_params = [lut_result['parameters'][p] for p in inversion_parameters.get_inversion_parameter_names()]
+                result = multi_start_inversion(
+                    pixel_spectra,
+                    inversion_parameters,
+                    n_starts=n_starts,
+                    **kwargs
+                )
+                return {
+                    'parameters': result.parameters,
+                    'error': result.objective_value,
+                    'modeled_spectra': result.modeled_spectra,
+                    'convergence': result.convergence_status,
+                    'status': 'multi_start_after_lut',
+                    'lut_result': lut_result  # Keep LUT result for comparison
+                }
+            else:
+                return lut_result
+
         except Exception as e:
             # Fall back to optimization if LUT fails
-            if refinement:
-                try:
-                    result = invert_spectrum(pixel_spectra, inversion_parameters, **kwargs)
-                    return {
-                        'parameters': result.parameters,
-                        'error': result.objective_value,
-                        'modeled_spectra': result.modeled_spectra,
-                        'convergence': result.convergence_status,
-                        'status': 'optimization_fallback',
-                        'error_message': str(e),
-                    }
-                except Exception as e2:
-                    # If both methods fail, return NaN values
-                    return {
-                        'parameters': {p: float('nan') for p in inversion_parameters.get_inversion_parameter_names()},
-                        'error': float('nan'),
-                        'modeled_spectra': np.full_like(pixel_spectra, float('nan')),
-                        'convergence': False,
-                        'status': 'inversion_failed',
-                        'error_message': f"LUT: {str(e)}, Optimization: {str(e2)}",
-                    }
-            else:
-                # If LUT fails and no refinement is requested, return NaN values
-                return {
-                    'parameters': {p: float('nan') for p in inversion_parameters.get_inversion_parameter_names()},
-                    'error': float('nan'),
-                    'modeled_spectra': np.full_like(pixel_spectra, float('nan')),
-                    'convergence': False,
-                    'status': 'lut_failed',
-                    'error_message': str(e),
-                }
+            pass
 
-    # Otherwise use optimization
+    # Use multi-start or regular optimization
     try:
-        result = invert_spectrum(pixel_spectra, inversion_parameters, **kwargs)
+        if use_multi_start:
+            result = multi_start_inversion(
+                pixel_spectra,
+                inversion_parameters,
+                n_starts=n_starts,
+                **kwargs
+            )
+        else:
+            result = invert_spectrum(pixel_spectra, inversion_parameters, **kwargs)
+
         return {
             'parameters': result.parameters,
             'error': result.objective_value,
             'modeled_spectra': result.modeled_spectra,
             'convergence': result.convergence_status,
-            'status': 'optimization_success',
+            'status': 'multi_start_success' if use_multi_start else 'optimization_success',
         }
     except Exception as e:
         # Handle inversion failures
@@ -104,10 +109,9 @@ def process_pixel(
             'error': float('nan'),
             'modeled_spectra': np.full_like(pixel_spectra, float('nan')),
             'convergence': False,
-            'status': 'optimization_failed',
+            'status': 'multi_start_failed' if use_multi_start else 'optimization_failed',
             'error_message': str(e),
         }
-
 
 # Function to process a batch of pixels (used by both ThreadPoolExecutor and ProcessPoolExecutor)
 def _process_pixel_batch(batch_data):
@@ -140,6 +144,8 @@ def process_image(
         progress_bar: bool = True,
         chunk_size: int = 500,
         use_threads: bool = True,
+        use_multi_start: bool = False,
+        n_starts: int = 5,
         **kwargs: Any,
 ) -> Dict[str, NDArray]:
     """Process an entire image to derive water properties with optimized performance.
@@ -164,6 +170,10 @@ def process_image(
         ValueError: If the image dimensions are invalid.
     """
     start_time = time.time()
+    kwargs.update({
+        'use_multi_start': use_multi_start,
+        'n_starts': n_starts
+    })
 
     # Default n_processes to CPU count if not specified
     if n_processes is None:
