@@ -12,6 +12,30 @@ siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_{os.path.basename(input_)}")
 mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI.tiff')
 
+siop_manager = sbc.SIOPManager(siop_dir)
+
+sentinel2_wavelengths = {
+    "B1": 442.7,  # Coastal aerosol
+    "B2": 492.4,  # Blue
+    "B3": 559.8,  # Green
+    "B4": 664.6,  # Red
+    "B5": 704.1,  # Vegetation red edge
+    "B6": 740.5,  # Vegetation red edge
+    "B7": 782.8,  # Vegetation red edge
+    "B8": 832.8,  # NIR
+    "B8A": 864.7, # Narrow NIR
+    "B9": 945.1,  # Water vapour
+    "B10": 1373.5, # SWIR - Cirrus
+    "B11": 1613.7, # SWIR
+    "B12": 2202.4  # SWIR
+}
+
+bands_used = ["B2", "B3", "B4", "B5"]
+wavelengths_used = [sentinel2_wavelengths[w] for w in bands_used]
+# Register the sensors you work with
+siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
+
+
 # Load the L2A image
 with rasterio.open(input_) as src:
     # Read all bands
@@ -34,7 +58,7 @@ with rasterio.open(input_) as src:
     surface_reflectance[no_data_mask] = np.nan
     rrs = surface_reflectance / np.pi
     rrs[rrs < 0] = 0
-    rrs_image = np.transpose(rrs, (1, 2, 0))
+    rrs_image = np.transpose(rrs, (1, 2, 0))[..., :len(wavelengths_used)]
 # Step 2: Set up the sensor information
 # The wavelengths should match your 5 bands (e.g., for Sentinel-2)
 if mask_input is not None and mask_input != '':
@@ -43,34 +67,15 @@ if mask_input is not None and mask_input != '':
         data_mask = (mask_image[2, ...] > 0.75)
 else:
     data_mask = np.ones_like(rrs_image[..., 0], dtype=bool)
-siop_manager = sbc.SIOPManager(siop_dir)
 
-sentinel2_wavelengths = {
-    "B1": 442.7,  # Coastal aerosol
-    "B2": 492.4,  # Blue
-    "B3": 559.8,  # Green
-    "B4": 664.6,  # Red
-    "B5": 704.1,  # Vegetation red edge
-    "B6": 740.5,  # Vegetation red edge
-    "B7": 782.8,  # Vegetation red edge
-    "B8": 832.8,  # NIR
-    "B8A": 864.7, # Narrow NIR
-    "B9": 945.1,  # Water vapour
-    "B10": 1373.5, # SWIR - Cirrus
-    "B11": 1613.7, # SWIR
-    "B12": 2202.4  # SWIR
-}
-
-bands_used = ["B2", "B3", "B4", "B5", "B6", "B7", "B8"]
-wavelengths_used = [sentinel2_wavelengths[w] for w in bands_used]
-# Register the sensors you work with
-siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
 
 # Create inversion parameters for a specific sensor
 params = InversionParameters(
     # Parameters to invert for
     depth=(0.1, 10.0),
-    chl=(0.1, 10.0),
+    cdom=(0, 10),
+
+    fixed_chl=1.6,
 )
 
 # Load SIOPs for this sensor
@@ -79,7 +84,7 @@ params.update_from_siop_manager(siop_manager, "Sentinel-2")
 # Step 4A: Use LUT approach for faster processing
 print("Building lookup table...")
 lut = LookUpTable(params)
-lut.build_table(grid_size=[30, 15, 10])  # Resolution for depth, chl, substrate_fraction
+lut.build_table(grid_size=[100, 100])  # Resolution for depth, chl, substrate_fraction
 lut.save("bathymetry_lut.pkl")
 
 # Step 4B: Process the image
