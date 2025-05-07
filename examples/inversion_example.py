@@ -6,6 +6,7 @@ import rasterio
 
 import sambuca_core as sbc
 from sambuca_core.inversion import InversionParameters, LookUpTable, process_image
+from sambuca_core.utility.outputs import visualize_sambuca_results
 
 input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
 siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
@@ -70,19 +71,36 @@ else:
 
 
 # Create inversion parameters for a specific sensor
-params = InversionParameters(
-    # Parameters to invert for
-    depth=(0.1, 10.0),
+params = sbc.inversion.InversionParameters(
+    # Parameters to invert for (with bounds optimized for Danish waters)
+    depth=(0.1, 30.0),  # Depth range: 0.1-30m for coastal waters
+    chl=(0.1, 5.0),  # Chlorophyll range: 0.1-15 mg/m³
+    cdom=(0.05, 2.0),  # CDOM range: 0.05-2.0 m⁻¹
+    nap=(0.1, 10.0),  # NAP range: 0.1-10 mg/L
+    substrate_fraction=(0.0, 1.0),  # Full range for substrate mixing
 
+    # Default values for fixed parameters (median values for Danish waters)
+    fixed_chl=2.0,  # Moderate productivity
+    fixed_cdom=0.3,  # Moderate CDOM level
+    fixed_nap=1.5,  # Moderate turbidity
+    fixed_depth=5.0,  # Typical shallow coastal depth
+    fixed_substrate_fraction=0.7,  # Sand dominant with some vegetation
+
+    # Other forward model parameters - can be tuned for Danish waters
+    a_cdom_slope=0.018,  # Typically 0.016-0.02 in Baltic/North Sea waters
+    a_nap_slope=0.010,  # Typical for fine sediments in Danish waters
+    bb_ph_slope=0.9,  # Typical for Danish phytoplankton communities
+    x_ph_lambda0x=0.0015,  # Backscatter efficiency for phytoplankton
+    x_nap_lambda0x=0.022,  # Backscatter efficiency for NAP
 )
 
-# Load SIOPs for this sensor
+# Update with sensor-specific SIOPs
 params.update_from_siop_manager(siop_manager, "Sentinel-2")
 
 # Step 4A: Use LUT approach for faster processing
 print("Building lookup table...")
 lut = LookUpTable(params)
-lut.build_table(grid_size=[100])  # Resolution for depth, chl, substrate_fraction
+lut.build_table(grid_size=[100, 20, 10, 30, 10])  # Resolution for depth, chl, substrate_fraction
 lut.save("bathymetry_lut.pkl")
 
 # Step 4B: Process the image
@@ -128,3 +146,5 @@ print(f"  Min depth: {np.min(valid_depths):.2f} m")
 print(f"  Max depth: {np.max(valid_depths):.2f} m")
 print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
 print(f"  Median depth: {np.median(valid_depths):.2f} m")
+
+visualize_sambuca_results(results, os.path.dirname(output_), os.path.basename(input_))
