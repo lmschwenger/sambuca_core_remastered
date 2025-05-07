@@ -73,9 +73,7 @@ else:
 params = InversionParameters(
     # Parameters to invert for
     depth=(0.1, 10.0),
-    cdom=(0, 10),
 
-    fixed_chl=1.6,
 )
 
 # Load SIOPs for this sensor
@@ -84,7 +82,7 @@ params.update_from_siop_manager(siop_manager, "Sentinel-2")
 # Step 4A: Use LUT approach for faster processing
 print("Building lookup table...")
 lut = LookUpTable(params)
-lut.build_table(grid_size=[100, 100])  # Resolution for depth, chl, substrate_fraction
+lut.build_table(grid_size=[100])  # Resolution for depth, chl, substrate_fraction
 lut.save("bathymetry_lut.pkl")
 
 # Step 4B: Process the image
