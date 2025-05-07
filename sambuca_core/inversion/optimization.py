@@ -44,7 +44,7 @@ def invert_spectrum(
         inversion_parameters: InversionParameters,
         objective_function: Callable = spectral_rmse,
         initial_values: Optional[List[float]] = None,
-        method: str = 'L-BFGS-B',
+        method: str = 'SLSQP',
         options: Optional[Dict[str, Any]] = None,
 ) -> OptimizationResult:
     """Invert a single spectrum to derive water properties.

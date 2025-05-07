@@ -107,4 +107,8 @@ def example_siop_manager_usage():
 
 # Run the example
 if __name__ == "__main__":
-    example_siop_manager_usage()
+   # example_siop_manager_usage()
+    siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
+    siop_manager = sbc.SIOPManager(siop_dir)
+    siop_manager.register_sensor("Sentinel-2", [443, 490, 560, 665, 705, 740, 783, 842, 865])
+    siop_manager.plot_full_siop_library(save_path=os.path.join(os.path.dirname(__file__), '..', 'data', 'output', 'siops.png'))

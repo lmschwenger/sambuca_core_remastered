@@ -58,31 +58,31 @@ class InversionParameters:
     substrate_fraction: Optional[Tuple[float, float]] = None
 
     # Fixed parameter values (used when corresponding bound is None)
-    fixed_chl: float = 1.0
-    fixed_cdom: float = 0.5
-    fixed_nap: float = 1.0
-    fixed_depth: float = 5.0
-    fixed_substrate_fraction: float = 1.0
+    fixed_chl: float = 1.0  # ug/L
+    fixed_cdom: float = 0.05 # ratio # https://doi.pangaea.de/10.1594/PANGAEA.921534
+    fixed_nap: float = 1.0  # mg/L
+    fixed_depth: float = 5.0  # meter
+    fixed_substrate_fraction: float = 1.0  # ratio
 
     # Essential parameters for the forward model
-    wavelengths: Union[List[float], NDArray[np.float64]] = field(default_factory=list)
-    a_water: Union[List[float], NDArray[np.float64]] = field(default_factory=list)
-    a_ph_star: Union[List[float], NDArray[np.float64]] = field(default_factory=list)
+    wavelengths: Union[List[float], NDArray[np.float64]] = field(default_factory=list)  # nanometers
+    a_water: Union[List[float], NDArray[np.float64]] = field(default_factory=list)  # m^-1
+    a_ph_star: Union[List[float], NDArray[np.float64]] = field(default_factory=list)  # m^-1
     substrate1: Union[List[float], NDArray[np.float64]] = field(default_factory=list)
     substrate2: Optional[Union[List[float], NDArray[np.float64]]] = None
 
     # Other forward model parameters with default values
-    a_cdom_slope: float = 0.0168052
-    a_nap_slope: float = 0.00977262
+    a_cdom_slope: float = 0.0168052  # nm^-1
+    a_nap_slope: float = -0.0118  # nm^-1  # swampy do -0.0118 ... originally was 0.00977262
     bb_ph_slope: float = 0.878138
     bb_nap_slope: Optional[float] = None
     lambda0cdom: float = 550.0
     lambda0nap: float = 550.0
     lambda0x: float = 546.0
-    x_ph_lambda0x: float = 0.00157747
-    x_nap_lambda0x: float = 0.0225353
-    a_cdom_lambda0cdom: float = 1.0
-    a_nap_lambda0nap: float = 0.00433
+    x_ph_lambda0x: float = 0.00157747  # m^2/g -- backscatter coefficient
+    x_nap_lambda0x: float = 0.0225353  # m^2/g  -- 0.01 in swampy ... backscatter coefficient ... originally, 0.0225
+    a_cdom_lambda0cdom: float = 1.0  # m^-1
+    a_nap_lambda0nap: float = 0.00433  # m^-1
     bb_lambda_ref: float = 550.0
     water_refractive_index: float = 1.33784
     theta_air: float = 30.0

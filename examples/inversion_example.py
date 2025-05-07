@@ -31,11 +31,11 @@ sentinel2_wavelengths = {
     "B12": 2202.4  # SWIR
 }
 
-bands_used = ["B2", "B3", "B4", "B5"]
+bands_used = ["B2", "B3", "B4"]
 wavelengths_used = [sentinel2_wavelengths[w] for w in bands_used]
 # Register the sensors you work with
 siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
-
+siop_manager.plot_siops(sensor_name="Sentinel-2", save_path=os.path.join(os.path.dirname(__file__), '..', 'data', 'output', 'siops.png'))
 
 # Load the L2A image
 with rasterio.open(input_) as src:
@@ -55,10 +55,8 @@ with rasterio.open(input_) as src:
 
     # Handle no-data values (typically 0 or negative values)
     # Set them to NaN for proper handling later
-    no_data_mask = (image_int16 <= 0)
-    surface_reflectance[no_data_mask] = np.nan
     rrs = surface_reflectance / np.pi
-    rrs[rrs < 0] = 0
+    rrs[rrs < 0] = np.nan
     rrs_image = np.transpose(rrs, (1, 2, 0))[..., :len(wavelengths_used)]
 # Step 2: Set up the sensor information
 # The wavelengths should match your 5 bands (e.g., for Sentinel-2)
@@ -73,25 +71,14 @@ else:
 # Create inversion parameters for a specific sensor
 params = sbc.inversion.InversionParameters(
     # Parameters to invert for (with bounds optimized for Danish waters)
-    depth=(0.1, 30.0),  # Depth range: 0.1-30m for coastal waters
-    chl=(0.1, 5.0),  # Chlorophyll range: 0.1-15 mg/m³
-    cdom=(0.05, 2.0),  # CDOM range: 0.05-2.0 m⁻¹
-    nap=(0.1, 10.0),  # NAP range: 0.1-10 mg/L
-    substrate_fraction=(0.0, 1.0),  # Full range for substrate mixing
-
-    # Default values for fixed parameters (median values for Danish waters)
-    fixed_chl=2.0,  # Moderate productivity
-    fixed_cdom=0.3,  # Moderate CDOM level
-    fixed_nap=1.5,  # Moderate turbidity
-    fixed_depth=5.0,  # Typical shallow coastal depth
-    fixed_substrate_fraction=0.7,  # Sand dominant with some vegetation
+    depth=(0.1, 10),  # Depth range: 0.1-30m for coastal waters
+    chl=(0.1, 30),
+    cdom=(0.05, 5),
+    nap=(0.05, 5.5),
+    substrate_fraction=(0.1, 1),
 
     # Other forward model parameters - can be tuned for Danish waters
-    a_cdom_slope=0.018,  # Typically 0.016-0.02 in Baltic/North Sea waters
-    a_nap_slope=0.010,  # Typical for fine sediments in Danish waters
-    bb_ph_slope=0.9,  # Typical for Danish phytoplankton communities
-    x_ph_lambda0x=0.0015,  # Backscatter efficiency for phytoplankton
-    x_nap_lambda0x=0.022,  # Backscatter efficiency for NAP
+    theta_air=40.55, # 20170823 10:30 Anholt
 )
 
 # Update with sensor-specific SIOPs
@@ -100,7 +87,7 @@ params.update_from_siop_manager(siop_manager, "Sentinel-2")
 # Step 4A: Use LUT approach for faster processing
 print("Building lookup table...")
 lut = LookUpTable(params)
-lut.build_table(grid_size=[100, 20, 10, 30, 10])  # Resolution for depth, chl, substrate_fraction
+lut.build_table(grid_size=[50, 50, 10, 50, 50])  # Resolution for depth, chl, substrate_fraction
 lut.save("bathymetry_lut.pkl")
 
 # Step 4B: Process the image
@@ -109,7 +96,7 @@ results = process_image(
     rrs_image,
     params,
     mask=data_mask,
-    #  batch_size=(50, 50),  # Process in 100x100 pixel tiles
+    #batch_size=(50, 50),  # Process in 100x100 pixel tiles
     #  overlap=10, # 10-pixel overlap between tiles
     lut=lut,
     n_processes=4,  # Single process
