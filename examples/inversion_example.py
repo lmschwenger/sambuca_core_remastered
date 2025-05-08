@@ -7,10 +7,10 @@ import rasterio
 import sambuca_core as sbc
 from sambuca_core.inversion import InversionParameters, LookUpTable, process_image
 
-input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_clipout.tif')
+input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
 siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
 output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_{os.path.basename(input_)}")
-mask_input = os.path.join(os.path.dirname(input_), 'anholt_ndwi_clipout.tif')
+mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI.tiff')
 
 siop_manager = sbc.SIOPManager(siop_dir)
 
