@@ -6,12 +6,11 @@ import rasterio
 
 import sambuca_core as sbc
 from sambuca_core.inversion import InversionParameters, LookUpTable, process_image
-from sambuca_core.utility.outputs import visualize_sambuca_results
 
-input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
+input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_clipout.tif')
 siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
 output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_{os.path.basename(input_)}")
-mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI.tiff')
+mask_input = os.path.join(os.path.dirname(input_), 'anholt_ndwi_clipout.tif')
 
 siop_manager = sbc.SIOPManager(siop_dir)
 
@@ -57,7 +56,7 @@ with rasterio.open(input_) as src:
     # Set them to NaN for proper handling later
     rrs = surface_reflectance / np.pi
     rrs[rrs < 0] = np.nan
-    rrs_image = np.transpose(rrs, (1, 2, 0))[..., :len(wavelengths_used)]
+    rrs_image = np.transpose(rrs, (1, 2, 0))[..., 1:len(wavelengths_used) + 1]
 # Step 2: Set up the sensor information
 # The wavelengths should match your 5 bands (e.g., for Sentinel-2)
 if mask_input is not None and mask_input != '':
@@ -72,10 +71,10 @@ else:
 params = sbc.inversion.InversionParameters(
     # Parameters to invert for (with bounds optimized for Danish waters)
     depth=(0.1, 10),  # Depth range: 0.1-30m for coastal waters
-    chl=(0.1, 30),
-    cdom=(0.05, 5),
-    nap=(0.05, 5.5),
-    substrate_fraction=(0.1, 1),
+  #  chl=(0.1, 10),
+  #  cdom=(0.05, 30),
+  #  nap=(0.05, 30),
+  #  substrate_fraction=(0.1, 1),
 
     # Other forward model parameters - can be tuned for Danish waters
     theta_air=40.55, # 20170823 10:30 Anholt
@@ -85,10 +84,10 @@ params = sbc.inversion.InversionParameters(
 params.update_from_siop_manager(siop_manager, "Sentinel-2")
 
 # Step 4A: Use LUT approach for faster processing
-print("Building lookup table...")
-lut = LookUpTable(params)
-lut.build_table(grid_size=[50, 50, 10, 50, 50])  # Resolution for depth, chl, substrate_fraction
-lut.save("bathymetry_lut.pkl")
+#print("Building lookup table...")
+#lut = LookUpTable(params)
+#lut.build_table(grid_size=[50, 20, 10, 20, 20])  # Resolution for depth, chl, substrate_fraction
+#lut.save("bathymetry_lut.pkl")
 
 # Step 4B: Process the image
 print("Processing image...")
@@ -98,7 +97,7 @@ results = process_image(
     mask=data_mask,
     #batch_size=(50, 50),  # Process in 100x100 pixel tiles
     #  overlap=10, # 10-pixel overlap between tiles
-    lut=lut,
+    lut=None,
     n_processes=4,  # Single process
     progress_bar=True
 )
@@ -133,5 +132,3 @@ print(f"  Min depth: {np.min(valid_depths):.2f} m")
 print(f"  Max depth: {np.max(valid_depths):.2f} m")
 print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
 print(f"  Median depth: {np.median(valid_depths):.2f} m")
-
-visualize_sambuca_results(results, os.path.dirname(output_), os.path.basename(input_))

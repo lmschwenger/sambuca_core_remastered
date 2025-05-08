@@ -7,9 +7,14 @@ substrate composition) from observed remote sensing reflectance.
 
 from .parameters import InversionParameters
 from .objective_functions import spectral_rmse, spectral_angle_mapper
-from .optimization import invert_spectrum, OptimizationResult, optimize_from_grid
+from .optimization import invert_spectrum, OptimizationResult, multi_start_inversion
 from .lut import LookUpTable
 from .pixel_processor import process_pixel, process_image
+from .robust_inversion import (
+    robust_invert_spectrum,
+    multi_substrate_inversion,
+    spectral_angle_f_metric
+)
 
 __all__ = [
     'InversionParameters',
@@ -20,5 +25,7 @@ __all__ = [
     'LookUpTable',
     'process_pixel',
     'process_image',
-    'optimize_from_grid'
+    'robust_invert_spectrum',
+    'multi_substrate_inversion',
+    'spectral_angle_f_metric'
 ]

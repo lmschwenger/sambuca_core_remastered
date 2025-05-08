@@ -15,7 +15,8 @@ from numpy.typing import NDArray
 from tqdm import tqdm
 import time
 
-from .optimization import invert_spectrum
+from .robust_inversion import robust_invert_spectrum
+from .optimization import invert_spectrum, multi_start_inversion
 from .parameters import InversionParameters
 from .lut import LookUpTable
 
@@ -25,6 +26,9 @@ def process_pixel(
         inversion_parameters: InversionParameters,
         lut: Optional[LookUpTable] = None,
         refinement: bool = True,
+        use_multi_start: bool = False,
+        use_robust_inversion: bool = True,  # Add this parameter
+        n_starts: int = 5,
         **kwargs: Any,
 ) -> Dict[str, Any]:
     """Process a single pixel spectrum.
@@ -34,12 +38,15 @@ def process_pixel(
         inversion_parameters: Parameters for the inversion process.
         lut: Optional look-up table for faster inversion.
         refinement: Whether to refine LUT results with optimization.
+        use_multi_start: Whether to use multi-start inversion.
+        use_robust_inversion: Whether to use robust inversion that avoids midpoints.
+        n_starts: Number of starting points for multi-start inversion.
         **kwargs: Additional arguments passed to invert_spectrum or lut.invert.
 
     Returns:
         Dictionary with inverted parameters and metadata.
     """
-    # Check for invalid pixel (e.g., negative values or NaNs)
+    # Check for invalid pixel
     if np.any(np.isnan(pixel_spectra)) or np.any(pixel_spectra < 0):
         return {
             'parameters': {p: float('nan') for p in inversion_parameters.get_inversion_parameter_names()},
@@ -52,50 +59,67 @@ def process_pixel(
     # Use LUT if provided
     if lut is not None:
         try:
-            return lut.invert(pixel_spectra, refine=refinement, **kwargs)
+            lut_kwargs = kwargs.copy()
+            if 'use_spectral_angle_f' in kwargs:
+                lut_kwargs.pop('use_spectral_angle_f')
+            if 'use_scaling' in kwargs:
+                lut_kwargs.pop('use_scaling')
+
+            lut_result = lut.invert(pixel_spectra, refine=refinement, **lut_kwargs)
+
+            # If using robust refinement after LUT
+            if refinement and use_robust_inversion:
+                # Use LUT result as one of the starting points
+                lut_params = [lut_result['parameters'][p] for p in inversion_parameters.get_inversion_parameter_names()]
+                result = robust_invert_spectrum(
+                    pixel_spectra,
+                    inversion_parameters,
+                    n_starts=n_starts,
+                    **kwargs
+                )
+                return {
+                    'parameters': result.parameters,
+                    'error': result.objective_value,
+                    'modeled_spectra': result.modeled_spectra,
+                    'convergence': result.convergence_status,
+                    'status': 'robust_after_lut',
+                    'lut_result': lut_result  # Keep LUT result for comparison
+                }
+            else:
+                return lut_result
+
         except Exception as e:
             # Fall back to optimization if LUT fails
-            if refinement:
-                try:
-                    result = invert_spectrum(pixel_spectra, inversion_parameters, **kwargs)
-                    return {
-                        'parameters': result.parameters,
-                        'error': result.objective_value,
-                        'modeled_spectra': result.modeled_spectra,
-                        'convergence': result.convergence_status,
-                        'status': 'optimization_fallback',
-                        'error_message': str(e),
-                    }
-                except Exception as e2:
-                    # If both methods fail, return NaN values
-                    return {
-                        'parameters': {p: float('nan') for p in inversion_parameters.get_inversion_parameter_names()},
-                        'error': float('nan'),
-                        'modeled_spectra': np.full_like(pixel_spectra, float('nan')),
-                        'convergence': False,
-                        'status': 'inversion_failed',
-                        'error_message': f"LUT: {str(e)}, Optimization: {str(e2)}",
-                    }
-            else:
-                # If LUT fails and no refinement is requested, return NaN values
-                return {
-                    'parameters': {p: float('nan') for p in inversion_parameters.get_inversion_parameter_names()},
-                    'error': float('nan'),
-                    'modeled_spectra': np.full_like(pixel_spectra, float('nan')),
-                    'convergence': False,
-                    'status': 'lut_failed',
-                    'error_message': str(e),
-                }
+            pass
 
-    # Otherwise use optimization
+    # Use robust inversion, multi-start, or regular optimization
     try:
-        result = invert_spectrum(pixel_spectra, inversion_parameters, **kwargs)
+        if use_robust_inversion:
+            result = robust_invert_spectrum(
+                pixel_spectra,
+                inversion_parameters,
+                n_starts=n_starts,
+                **kwargs
+            )
+            status = 'robust_inversion_success'
+        elif use_multi_start:
+            result = multi_start_inversion(
+                pixel_spectra,
+                inversion_parameters,
+                n_starts=n_starts,
+                **kwargs
+            )
+            status = 'multi_start_success'
+        else:
+            result = invert_spectrum(pixel_spectra, inversion_parameters, **kwargs)
+            status = 'optimization_success'
+
         return {
             'parameters': result.parameters,
             'error': result.objective_value,
             'modeled_spectra': result.modeled_spectra,
             'convergence': result.convergence_status,
-            'status': 'optimization_success',
+            'status': status,
         }
     except Exception as e:
         # Handle inversion failures
@@ -104,7 +128,7 @@ def process_pixel(
             'error': float('nan'),
             'modeled_spectra': np.full_like(pixel_spectra, float('nan')),
             'convergence': False,
-            'status': 'optimization_failed',
+            'status': 'inversion_failed',
             'error_message': str(e),
         }
 
@@ -273,7 +297,7 @@ def process_image(
         valid_depths = output['depth'][valid_mask]
         if len(valid_depths) > 0:
             print(f"Depth statistics:")
-            print(f"  Valid pixels: {len(valid_depths)} of {n_pixels} ({len(valid_depths)/n_pixels*100:.1f}%)")
+            print(f"  Valid pixels: {len(valid_depths)} of {n_pixels} ({len(valid_depths) / n_pixels * 100:.1f}%)")
             print(f"  Min depth: {np.min(valid_depths):.2f} m")
             print(f"  Max depth: {np.max(valid_depths):.2f} m")
             print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
@@ -423,7 +447,7 @@ def batch_process_image(
                 if valid_pixels > 0:
                     valid_depths = output['depth'][valid_mask]
                     print(f"Progress after {batch_count}/{total_batches} batches:")
-                    print(f"  Valid pixels: {valid_pixels} ({valid_pixels/(height*width)*100:.1f}%)")
+                    print(f"  Valid pixels: {valid_pixels} ({valid_pixels / (height * width) * 100:.1f}%)")
                     print(f"  Depth range: {np.min(valid_depths):.2f} - {np.max(valid_depths):.2f} m")
                     print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
 
@@ -447,7 +471,8 @@ def batch_process_image(
             valid_depths = output['depth'][valid_mask]
             if len(valid_depths) > 0:
                 print("\nFinal depth statistics:")
-                print(f"  Valid pixels: {np.sum(valid_mask)} of {height*width} ({np.sum(valid_mask)/(height*width)*100:.1f}%)")
+                print(
+                    f"  Valid pixels: {np.sum(valid_mask)} of {height * width} ({np.sum(valid_mask) / (height * width) * 100:.1f}%)")
                 print(f"  Min depth: {np.min(valid_depths):.2f} m")
                 print(f"  Max depth: {np.max(valid_depths):.2f} m")
                 print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
