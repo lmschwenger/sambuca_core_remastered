@@ -656,6 +656,99 @@ class SIOPManager:
 
         return fig
 
-    # Example usage:
-    # plot_full_siop_library('/path/to/siop_directory', 'siop_library.png')
-    # plot_comparison_spectra(siop_manager, 'Sentinel-2', 'parameter_comparison.png')
+    # siop_manager.py (additions to your existing class)
+
+    def prepare_sensor_filters(
+            self,
+            sensor_name: str,
+            common_wavelengths: Optional[NDArray[np.float64]] = None
+    ) -> Dict[str, Tuple[NDArray[np.float64], NDArray[np.float64]]]:
+        """Prepares sensor filters for use with spectral data.
+
+        This method retrieves the sensor filters for a registered sensor,
+        optionally truncates them to match common wavelengths, and returns
+        them ready for application to spectral data.
+
+        Args:
+            sensor_name: Name of a registered sensor.
+            common_wavelengths: Optional wavelength range to which the filters
+                should be truncated.
+
+        Returns:
+            Dictionary of sensor filters, each containing (wavelengths, filter_response).
+
+        Raises:
+            KeyError: If the sensor has not been registered.
+        """
+        if sensor_name not in self.sensor_configs:
+            raise KeyError(f"Sensor '{sensor_name}' not registered")
+
+        # Get the raw filters for this sensor
+        sensor_filters = self.get_sensor_filters(sensor_name)
+
+        # If common wavelengths are provided, truncate the filters
+        if common_wavelengths is not None:
+            from .sensor_filter import truncate_filter_to_wavelengths
+
+            processed_filters = {}
+            for name, filter_data in sensor_filters.items():
+                processed_filters[name] = truncate_filter_to_wavelengths(
+                    filter_data, common_wavelengths)
+
+            return processed_filters
+
+        return sensor_filters
+
+    def get_sensor_filters(self, sensor_name: str) -> Dict[str, Tuple[NDArray[np.float64], NDArray[np.float64]]]:
+        """Gets all sensor filters for a specific sensor.
+
+        Args:
+            sensor_name: Name of a registered sensor.
+
+        Returns:
+            Dictionary of sensor filters, each containing (wavelengths, filter_response).
+
+        Raises:
+            KeyError: If the sensor has not been registered.
+        """
+        if sensor_name not in self.sensor_configs:
+            raise KeyError(f"Sensor '{sensor_name}' not registered")
+
+        # This would depend on how you're storing sensor filters
+        # Here's a placeholder implementation assuming sensor filters are stored in a class attribute
+        if hasattr(self, 'sensor_filters') and sensor_name in self.sensor_filters:
+            return self.sensor_filters[sensor_name]
+
+        # If not stored, could load them from a file or create them
+        # For example:
+        # return self._load_sensor_filters(sensor_name)
+
+        # Placeholder:
+        return {}
+
+    def register_sensor_filters(
+            self,
+            sensor_name: str,
+            sensor_filters: Dict[str, Tuple[NDArray[np.float64], NDArray[np.float64]]]
+    ) -> None:
+        """Registers sensor filters for a specific sensor.
+
+        Args:
+            sensor_name: Name of the sensor.
+            sensor_filters: Dictionary of sensor filters, each containing (wavelengths, filter_response).
+        """
+        # Initialize the sensor_filters attribute if it doesn't exist
+        if not hasattr(self, 'sensor_filters'):
+            self.sensor_filters = {}
+
+        # Register the sensor if not already registered
+        if sensor_name not in self.sensor_configs:
+            # Extract wavelengths from the first filter (assuming all filters use the same wavelengths)
+            first_filter = next(iter(sensor_filters.values()))
+            wavelengths = first_filter[0]
+            self.register_sensor(sensor_name, wavelengths)
+
+        # Store the filters
+        self.sensor_filters[sensor_name] = sensor_filters
+
+        print(f"Registered {len(sensor_filters)} filters for sensor '{sensor_name}'")

@@ -14,10 +14,11 @@ from .exceptions import (
 )
 from .forward_model import forward_model, ForwardModelResults
 from .sensor_filter import (
-    apply_sensor_filter,
-    load_sensor_filters,
-    load_sensor_filters_excel,
-    load_sensor_filter_spectral_library,
+    truncate_filter_to_wavelengths,
+    interpolate_filter_to_wavelengths,
+    normalize_filter_response,
+    validate_sensor_filter,
+    apply_sensor_filter_with_validation,
 )
 from .siop_manager import SIOPManager
 from .spectra_operations import (
@@ -35,6 +36,8 @@ from .utility import (
     strictly_decreasing,
     strictly_increasing,
 )
+
+from .preparation import prepare_spectral_inputs
 
 __author__ = "Lasse M. Schwenger"
 __email__ = "lasse.m.schwenger@gmail.com"

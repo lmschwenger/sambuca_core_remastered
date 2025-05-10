@@ -7,10 +7,10 @@ import rasterio
 import sambuca_core as sbc
 from sambuca_core.inversion import InversionParameters, LookUpTable, process_image
 
-input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
-siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
+input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09_clipped.tif')
+siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "swampy_siops")
 output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_{os.path.basename(input_)}")
-mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI.tiff')
+mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI_clipped.tiff')
 
 siop_manager = sbc.SIOPManager(siop_dir)
 
@@ -57,6 +57,8 @@ with rasterio.open(input_) as src:
     rrs = surface_reflectance / np.pi
     rrs[rrs < 0] = np.nan
     rrs_image = np.transpose(rrs, (1, 2, 0))[..., 1:len(wavelengths_used) + 1]
+
+    rrs_image = (2 * rrs_image) / ((3 * rrs_image) + 1)
 # Step 2: Set up the sensor information
 # The wavelengths should match your 5 bands (e.g., for Sentinel-2)
 if mask_input is not None and mask_input != '':
@@ -70,10 +72,10 @@ else:
 # Create inversion parameters for a specific sensor
 params = sbc.inversion.InversionParameters(
     # Parameters to invert for (with bounds optimized for Danish waters)
-    depth=(0.1, 10),  # Depth range: 0.1-30m for coastal waters
-  #  chl=(0.1, 10),
-  #  cdom=(0.05, 30),
-  #  nap=(0.05, 30),
+    depth=(0.1, 30),  # Depth range: 0.1-30m for coastal waters
+    chl=(0.1, 2),
+    cdom=(0.0005, 0.1),
+    nap=(0.1, 1),
   #  substrate_fraction=(0.1, 1),
 
     # Other forward model parameters - can be tuned for Danish waters
@@ -113,9 +115,6 @@ depth_meta.update({
     'nodata': np.nan
 })
 
-# Save depth results as a new GeoTIFF
-with rasterio.open(output_, 'w', **depth_meta) as dst:
-    dst.write(depth_map.astype('float32'), 1)
 
 # Visualize the results
 plt.figure(figsize=(12, 8))
@@ -124,6 +123,9 @@ plt.colorbar(label='Depth (m)')
 plt.title('Derived Bathymetry')
 plt.savefig('bathymetry_map.png', dpi=300)
 plt.show()
+# Save depth results as a new GeoTIFF
+with rasterio.open(output_, 'w', **depth_meta) as dst:
+    dst.write(depth_map.astype('float32'), 1)
 
 # Calculate some statistics on the results
 valid_depths = depth_map[~np.isnan(depth_map)]

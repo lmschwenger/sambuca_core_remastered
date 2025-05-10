@@ -304,5 +304,5 @@ def create_forward_model_simulation(siop_dir):
 
 
 if __name__ == "__main__":
-    plot_siop_libraries(siop_dir=os.path.join('..', 'data', 'siops'))
+    plot_siop_libraries(siop_dir=os.path.join('..', 'data', 'swampy_siops'))
     print("SIOP plotting complete!")
