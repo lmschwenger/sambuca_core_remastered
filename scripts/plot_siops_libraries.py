@@ -226,7 +226,7 @@ def create_forward_model_simulation(siop_dir):
         _, substrate2 = load_csv_spectra(seagrass_path)
 
     # Ensure all arrays are the same length by interpolating if needed
-    if len(set([len(a_water), len(a_ph_star), len(substrate1)])) > 1:
+    if len({len(a_water), len(a_ph_star), len(substrate1)}) > 1:
         print("Warning: Arrays have different lengths. Interpolation needed.")
         # Implementation of interpolation would go here
         # For simplicity, just use the shortest length for now
@@ -250,8 +250,8 @@ def create_forward_model_simulation(siop_dir):
     for depth in depths:
         result = sbc.forward_model(
             chl=1.0,  # Fixed chlorophyll
-            cdom=0.5,
-            nap=1.0,
+            cdom=0.005,
+            nap=0,
             depth=depth,
             substrate1=substrate1,
             substrate2=substrate2,
@@ -304,5 +304,5 @@ def create_forward_model_simulation(siop_dir):
 
 
 if __name__ == "__main__":
-    plot_siop_libraries(siop_dir=os.path.join('..', 'data', 'swampy_siops'))
+    plot_siop_libraries(siop_dir=os.path.join('..', 'data', 'siops'))
     print("SIOP plotting complete!")

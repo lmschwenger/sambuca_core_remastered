@@ -194,3 +194,50 @@ def apply_sensor_filter_with_validation(
             filter_response, spectra_arr
         ) / filter_response.sum(axis=1)
         return result.flatten()  # Ensure output is 1D
+
+
+def load_sensor_filters_csv(filepath, normalise=False):
+    """Load sensor filters from a CSV file with comma as separator.
+
+    Args:
+        filepath: Path to the CSV file
+        normalise: If True, normalize the filter response values
+
+    Returns:
+        Dictionary mapping sensor name to a tuple of (wavelengths, filter_matrix)
+    """
+    import numpy as np
+    import pandas as pd
+    import os
+
+    try:
+        # Read the CSV file
+        df = pd.read_csv(filepath, sep=',')
+
+        # Assume first column is wavelength and set as index
+        wavelength_column = df.columns[0]
+        df.set_index(wavelength_column, inplace=True)
+
+        # Extract wavelengths as numpy array
+        wavelengths = np.array(df.index)
+
+        # Extract response functions as numpy array
+        response_matrix = df.values.T  # Transpose to get bands as rows
+
+        # Normalize if requested
+        if normalise:
+            # Normalize each band (row) individually
+            row_maxes = response_matrix.max(axis=1, keepdims=True)
+            # Avoid division by zero
+            row_maxes[row_maxes == 0] = 1.0
+            response_matrix = response_matrix / row_maxes
+
+        # Use the file basename as the sensor name (without extension)
+        sensor_name = os.path.splitext(os.path.basename(filepath))[0]
+
+        # Return dictionary with sensor name as key
+        return {sensor_name: (wavelengths, response_matrix)}
+
+    except Exception as e:
+        print(f"Error loading sensor filter from {filepath}: {e}")
+        return {}
