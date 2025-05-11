@@ -76,7 +76,7 @@ def invert_spectrum(
 
     # Set default options
     if options is None:
-        options = {'maxiter': 100, 'disp': False}
+        options = {'maxiter': 5000, 'disp': False}
 
     # Objective function wrapper
     def objective(x):

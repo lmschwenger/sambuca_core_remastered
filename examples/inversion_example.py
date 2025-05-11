@@ -35,6 +35,7 @@ with rasterio.open(input_) as src:
     rrs = surface_reflectance / np.pi
     rrs[rrs < 0] = 0
     rrs_image = np.transpose(rrs, (1, 2, 0))
+    rrs_image = (2 * rrs_image) / ((3 * rrs_image) + 1)
 # Step 2: Set up the sensor information
 # The wavelengths should match your 5 bands (e.g., for Sentinel-2)
 if mask_input is not None and mask_input != '':
@@ -69,8 +70,10 @@ siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
 # Create inversion parameters for a specific sensor
 params = InversionParameters(
     # Parameters to invert for
-    depth=(0.1, 10.0),
-    chl=(0.1, 10.0),
+    depth=(0.1, 12.0),
+    chl=(0.01, 5.0),
+  #  cdom=(0.0005, 0.01),
+  #  nap=(0.01, 0.5)
 )
 
 # Load SIOPs for this sensor
@@ -96,7 +99,8 @@ results = process_image(
     #  overlap=10, # 10-pixel overlap between tiles
     lut=lut,
     n_processes=4,  # Single process
-    progress_bar=True
+    progress_bar=True,
+    n_starts=10
 )
 
 # Step 5: Save and visualize depth results
