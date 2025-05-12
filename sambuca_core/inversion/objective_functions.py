@@ -9,6 +9,7 @@ from typing import List, Optional, Dict, Any, Union
 import numpy as np
 from numpy.typing import NDArray
 
+from . import InversionParameters
 from ..forward_model import forward_model
 
 
@@ -37,6 +38,8 @@ def spectral_rmse(
 
     # Run forward model
     results = forward_model(**forward_model_params)
+
+    # TODO: Apply sensor filter here.
 
     # Calculate error
     if error_weight is not None:
@@ -187,3 +190,53 @@ def spectral_chi_square(
         }
 
     return chi_square
+
+
+def spectral_rmse_with_nedr(
+        params: List[float],
+        observed_rrs: NDArray[np.float64],
+        inversion_parameters: 'InversionParameters',
+        nedr: Optional[NDArray[np.float64]] = None,
+        return_modeled_spectra: bool = False,
+) -> Union[float, Dict[str, Any]]:
+    """Calculate NEDR-weighted RMSE between observed and modeled reflectance.
+
+    Args:
+        params: Optimization parameters (values for the parameters being inverted).
+        observed_rrs: Observed remote sensing reflectance.
+        inversion_parameters: Parameters for the inversion process.
+        nedr: Noise equivalent difference in reflectance values for each band.
+        return_modeled_spectra: If True, return a dictionary with error and modeled spectra.
+
+    Returns:
+        Root mean square error between observed and modeled reflectance, or
+        a dictionary with error and modeled spectra if return_modeled_spectra is True.
+    """
+    # Convert params to forward model inputs
+    forward_model_params = inversion_parameters.get_forward_model_params(params)
+
+    # Run forward model
+    results = forward_model(**forward_model_params)
+
+    # Calculate error with NEDR weighting
+    if nedr is not None:
+        # Weight by inverse variance (1/sigma^2)
+        weights = 1.0 / (nedr ** 2)
+
+        # Weighted squared differences
+        weighted_squared_diff = weights * ((results.rrs - observed_rrs) ** 2)
+
+        # Calculate weighted RMSE
+        error = np.sqrt(np.sum(weighted_squared_diff) / np.sum(weights))
+    else:
+        # Standard RMSE if no NEDR provided
+        error = np.sqrt(np.mean((results.rrs - observed_rrs) ** 2))
+
+    if return_modeled_spectra:
+        return {
+            'error': error,
+            'modeled_spectra': results.rrs,
+            'forward_model_results': results
+        }
+
+    return error

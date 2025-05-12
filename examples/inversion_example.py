@@ -1,5 +1,5 @@
 import os
-
+import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import rasterio
@@ -7,10 +7,20 @@ import rasterio
 import sambuca_core as sbc
 from sambuca_core.inversion import InversionParameters, LookUpTable, process_image
 
+# Add the new imports for NEDR support
+from sambuca_core.inversion.objective_functions import spectral_rmse_with_nedr
+
+# Define paths
 input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
 siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
-output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_{os.path.basename(input_)}")
+output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_nedr_{os.path.basename(input_)}")
 mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI.tiff')
+
+# Define the path to your NEDR CSV file
+nedr_csv = os.path.join(os.path.dirname(__file__), '..', 'data', 'nedr', 's2testc.csv')
+
+# Load NEDR values from CSV
+nedr_df = pd.read_csv(nedr_csv)
 
 # Load the L2A image
 with rasterio.open(input_) as src:
@@ -34,16 +44,17 @@ with rasterio.open(input_) as src:
     surface_reflectance[no_data_mask] = np.nan
     rrs = surface_reflectance / np.pi
     rrs[rrs < 0] = 0
-    rrs_image = np.transpose(rrs, (1, 2, 0))
-    rrs_image = (2 * rrs_image) / ((3 * rrs_image) + 1)
-# Step 2: Set up the sensor information
-# The wavelengths should match your 5 bands (e.g., for Sentinel-2)
+    rrs_image = np.transpose(rrs, (1, 2, 0))[..., :4]
+ #   rrs_image = (2 * rrs_image) / ((3 * rrs_image) + 1)
+
+# Step 2: Set up the sensor information and mask
 if mask_input is not None and mask_input != '':
     with rasterio.open(mask_input) as src:
         mask_image = src.read()
         data_mask = (mask_image[2, ...] > 0.75)
 else:
     data_mask = np.ones_like(rrs_image[..., 0], dtype=bool)
+
 siop_manager = sbc.SIOPManager(siop_dir)
 
 sentinel2_wavelengths = {
@@ -55,56 +66,61 @@ sentinel2_wavelengths = {
     "B6": 740.5,  # Vegetation red edge
     "B7": 782.8,  # Vegetation red edge
     "B8": 832.8,  # NIR
-    "B8A": 864.7, # Narrow NIR
+    "B8A": 864.7,  # Narrow NIR
     "B9": 945.1,  # Water vapour
-    "B10": 1373.5, # SWIR - Cirrus
-    "B11": 1613.7, # SWIR
+    "B10": 1373.5,  # SWIR - Cirrus
+    "B11": 1613.7,  # SWIR
     "B12": 2202.4  # SWIR
 }
 
-bands_used = ["B2", "B3", "B4", "B5", "B6", "B7", "B8"]
+bands_used = ["B2", "B3", "B4", "B5"]
 wavelengths_used = [sentinel2_wavelengths[w] for w in bands_used]
+
 # Register the sensors you work with
 siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
 
 # Create inversion parameters for a specific sensor
 params = InversionParameters(
     # Parameters to invert for
-    depth=(0.1, 12.0),
-    chl=(0.01, 5.0),
-  #  cdom=(0.0005, 0.01),
-  #  nap=(0.01, 0.5)
+    depth=(0.1, 10.0),
+    chl=(0.01, 2.0),
+    #  cdom=(0.0005, 0.01),
+    #  nap=(0.01, 0.5)
 )
 
 # Load SIOPs for this sensor
 params.update_from_siop_manager(siop_manager, "Sentinel-2")
 
-# Step 4A: Use LUT approach for faster processing
-use_lut = False
-if use_lut:
-    print("Building lookup table...")
-    lut = LookUpTable(params)
-    lut.build_table(grid_size=[30, 15, 10])  # Resolution for depth, chl, substrate_fraction
-    lut.save("bathymetry_lut.pkl")
-else:
-    lut = None
+# Step 3: Add NEDR values to the inversion parameters
+# Extract NEDR values in the same order as the wavelengths
+nedr_values = []
+for wl in wavelengths_used:
+    # Round to closest integer for comparison, since CSV might have slightly different values
+    closest_wl = nedr_df['wl'].iloc[(nedr_df['wl'] - wl).abs().argsort()[0]]
+    nedr_value = nedr_df.loc[nedr_df['wl'] == closest_wl, 'rrs'].values[0]
+    nedr_values.append(nedr_value)
 
-# Step 4B: Process the image
-print("Processing image...")
-results = process_image(
+# Convert to array and add to parameters
+nedr_values = np.array(nedr_values)
+
+# Now set NEDR values
+# params.set_nedr(nedr_values)
+
+# Now with NEDR weighting
+print("\nProcessing image with NEDR weighting...")
+results_with_nedr = process_image(
     rrs_image,
-    params,
+    params,  # This now has NEDR values
     mask=data_mask,
-    #  batch_size=(50, 50),  # Process in 100x100 pixel tiles
-    #  overlap=10, # 10-pixel overlap between tiles
-    lut=lut,
-    n_processes=4,  # Single process
+    lut=None,
+    n_processes=4,
     progress_bar=True,
-    n_starts=10
+    n_starts=10,
+    objective_function=spectral_rmse_with_nedr  # Use NEDR-weighted objective function
 )
 
-# Step 5: Save and visualize depth results
-depth_map = results['depth']
+# Step 6: Save the final NEDR-based depth results
+depth_map = results_with_nedr['depth']
 
 # Create a copy of the metadata and update for single band output
 depth_meta = metadata.copy()
@@ -118,17 +134,17 @@ depth_meta.update({
 with rasterio.open(output_, 'w', **depth_meta) as dst:
     dst.write(depth_map.astype('float32'), 1)
 
-# Visualize the results
+# Visualize the NEDR-based results
 plt.figure(figsize=(12, 8))
 plt.imshow(depth_map, cmap='viridis')
 plt.colorbar(label='Depth (m)')
-plt.title('Derived Bathymetry')
-plt.savefig('bathymetry_map.png', dpi=300)
+plt.title('Derived Bathymetry with NEDR Weighting')
+plt.savefig('bathymetry_map_nedr.png', dpi=300)
 plt.show()
 
-# Calculate some statistics on the results
+# Calculate statistics on the NEDR-based results
 valid_depths = depth_map[~np.isnan(depth_map)]
-print(f"Depth statistics:")
+print(f"\nNEDR-weighted depth statistics:")
 print(f"  Min depth: {np.min(valid_depths):.2f} m")
 print(f"  Max depth: {np.max(valid_depths):.2f} m")
 print(f"  Mean depth: {np.mean(valid_depths):.2f} m")

@@ -56,8 +56,9 @@ class InversionParameters:
     nap: Optional[Tuple[float, float]] = None
     depth: Optional[Tuple[float, float]] = None
     substrate_fraction: Optional[Tuple[float, float]] = None
+    nedr: Optional[Union[List[float], NDArray[np.float64]]] = None
 
-    # Fixed parameter values (used when corresponding bound is None)
+    # Fixed parameter values (used when the corresponding bound is None)
     fixed_chl: float = 1.0
     fixed_cdom: float = 0.5
     fixed_nap: float = 1.0
@@ -88,6 +89,27 @@ class InversionParameters:
     theta_air: float = 30.0
     off_nadir: float = 0.0
     q_factor: float = np.pi
+
+    def set_nedr(self, nedr_values: Union[List[float], NDArray[np.float64]]) -> 'InversionParameters':
+        """Set NEDR values for the inversion.
+
+        Args:
+            nedr_values: NEDR values for each wavelength
+
+        Returns:
+            Self for method chaining
+
+        Raises:
+            ValueError: If NEDR values length doesn't match wavelengths
+        """
+        nedr_array = np.asarray(nedr_values)
+
+        if len(nedr_array) != len(self.wavelengths):
+            raise ValueError(
+                f"NEDR values length ({len(nedr_array)}) must match wavelengths length ({len(self.wavelengths)})")
+
+        self.nedr = nedr_array
+        return self
 
     def get_parameter_bounds(self) -> List[Tuple[float, float]]:
         """Returns bounds for all parameters being inverted.

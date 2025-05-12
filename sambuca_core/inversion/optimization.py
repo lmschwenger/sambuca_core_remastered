@@ -80,7 +80,11 @@ def invert_spectrum(
 
     # Objective function wrapper
     def objective(x):
-        return objective_function(x, observed_rrs, inversion_parameters)
+        # Pass NEDR if available in inversion_parameters
+        if hasattr(inversion_parameters, 'nedr') and inversion_parameters.nedr is not None:
+            return objective_function(x, observed_rrs, inversion_parameters, nedr=inversion_parameters.nedr)
+        else:
+            return objective_function(x, observed_rrs, inversion_parameters)
 
     # Perform optimization
     result = optimize.minimize(

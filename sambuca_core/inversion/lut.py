@@ -304,16 +304,18 @@ class LookUpTable:
             n_best: int = 1,
             use_kdtree: bool = True,
             use_multi_start: bool = False,
-            n_starts: int = 5
+            n_starts: int = 5,
+            nedr: Optional[NDArray[np.float64]] = None
     ) -> Dict[str, Any]:
         """Invert observed reflectance using the look-up table with optimized performance.
 
         Args:
             observed_rrs: Observed remote sensing reflectance.
-            metric: Error metric ('rmse', 'sam' [Spectral Angle Mapper], or 'euclidean').
+            metric: Error metric ('rmse', 'sam' [Spectral Angle Mapper], or 'Euclidean').
             refine: Whether to refine the result with local optimization.
             n_best: Number of best matches to consider for refinement.
             use_kdtree: Whether to use KD-tree for fast lookups (if available).
+            nedr: Noise equivalent delta reflectance for weighting.
 
         Returns:
             Dictionary with inverted parameters and metadata.
@@ -347,7 +349,14 @@ class LookUpTable:
 
                 for params, spectra in self.points.items():
                     if metric == 'rmse':
-                        error = np.sqrt(np.mean((spectra - observed_rrs) ** 2))
+                        if nedr is not None:
+                            # NEDR-weighted RMSE
+                            weights = 1.0 / (nedr ** 2)
+                            weighted_squared_diff = weights * ((spectra - observed_rrs) ** 2)
+                            error = np.sqrt(np.sum(weighted_squared_diff) / np.sum(weights))
+                        else:
+                            # Standard RMSE
+                            error = np.sqrt(np.mean((spectra - observed_rrs) ** 2))
                     elif metric == 'euclidean':
                         error = np.sqrt(np.sum((spectra - observed_rrs) ** 2))
                     elif metric == 'sam':

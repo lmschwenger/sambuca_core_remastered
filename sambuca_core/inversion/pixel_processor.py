@@ -56,6 +56,9 @@ def process_pixel(
     # Use LUT if provided
     if lut is not None:
         try:
+            if hasattr(inversion_parameters, 'nedr') and inversion_parameters.nedr is not None:
+                kwargs['nedr'] = inversion_parameters.nedr
+
             lut_result = lut.invert(pixel_spectra, refine=refinement, **kwargs)
 
             # If using multi-start refinement after LUT
@@ -85,6 +88,10 @@ def process_pixel(
 
     # Use multi-start or regular optimization
     try:
+        if hasattr(inversion_parameters, 'nedr') and inversion_parameters.nedr is not None:
+            from .objective_functions import spectral_rmse_with_nedr
+            kwargs['objective_function'] = spectral_rmse_with_nedr
+
         if use_multi_start:
             result = multi_start_inversion(
                 pixel_spectra,
