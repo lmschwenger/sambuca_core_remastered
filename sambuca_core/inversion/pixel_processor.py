@@ -270,6 +270,9 @@ def process_image(
     output['convergence'] = np.full((height, width), False)
     output['status'] = np.full((height, width), '', dtype=object)
 
+    # Add modeled spectra array if needed for visualization
+    output['modeled_spectra'] = np.full((height, width, bands), np.nan)
+
     # Fill output arrays
     for idx, result in all_results:
         y, x = y_indices[idx], x_indices[idx]
@@ -280,6 +283,10 @@ def process_image(
         output['error'][y, x] = result.get('error', np.nan)
         output['convergence'][y, x] = result.get('convergence', False)
         output['status'][y, x] = result.get('status', 'unknown')
+
+        # Add modeled spectra if available
+        if 'modeled_spectra' in result:
+            output['modeled_spectra'][y, x, :] = result['modeled_spectra']
 
     elapsed_time = time.time() - start_time
     print(f"Image processing completed in {elapsed_time:.2f} seconds")
@@ -358,6 +365,9 @@ def batch_process_image(
     output['error'] = np.full((height, width), np.nan)
     output['convergence'] = np.full((height, width), False)
     output['status'] = np.full((height, width), '', dtype=object)
+
+    # Add modeled spectra array if needed for visualization
+    output['modeled_spectra'] = np.full((height, width, bands), np.nan)
 
     # Calculate batch coordinates with smarter batching - prioritize square batches
     batch_height, batch_width = batch_size

@@ -280,3 +280,194 @@ def plot_all_siop_categories(siop_directory, output_dir=None, show=True):
                    title=title,
                    y_label=y_label,
                    show=show)
+
+
+def plot_inversion_results(results, wavelengths=None, output_dir=None, prefix='inversion_result', 
+                          figsize=(12, 10), dpi=300, show=True, sample_pixel=None, observed_spectra=None):
+    """
+    Create comprehensive plots of inversion results.
+
+    Parameters:
+    -----------
+    results : dict
+        Dictionary of inversion results from process_image
+    wavelengths : list or array, optional
+        Wavelengths used in the inversion
+    output_dir : str, optional
+        Directory to save figures, if None, figures are not saved
+    prefix : str, optional
+        Prefix for output filenames
+    figsize : tuple, optional
+        Figure size (width, height) in inches
+    dpi : int, optional
+        Resolution for saved figures
+    show : bool, optional
+        If True, display the figures
+    sample_pixel : tuple, optional
+        (y, x) coordinates of a sample pixel to plot spectra for
+    observed_spectra : ndarray, optional
+        Original image data, needed if sample_pixel is provided
+
+    Returns:
+    --------
+    dict
+        Dictionary of created figures
+    """
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LinearSegmentedColormap
+    import matplotlib.gridspec as gridspec
+
+    # Create output directory if needed
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Store all created figures
+    figures = {}
+
+    # Get parameter names (excluding metadata)
+    param_names = [key for key in results.keys() 
+                  if key not in ['error', 'convergence', 'status']]
+
+    # Create a figure with subplots for all parameters and error
+    n_params = len(param_names) + 1  # +1 for error
+    n_cols = min(3, n_params)
+    n_rows = (n_params + n_cols - 1) // n_cols
+
+    # Create figure for parameter maps
+    fig_maps = plt.figure(figsize=figsize)
+    gs = gridspec.GridSpec(n_rows, n_cols, figure=fig_maps)
+
+    # Plot each parameter
+    for i, param in enumerate(param_names):
+        ax = fig_maps.add_subplot(gs[i // n_cols, i % n_cols])
+
+        # Get data and mask invalid values
+        data = results[param]
+        masked_data = np.ma.masked_invalid(data)
+
+        # Choose appropriate colormap
+        if param.lower() == 'depth':
+            cmap = 'viridis'
+            title = 'Depth (m)'
+        elif param.lower() == 'chl':
+            cmap = 'YlGn'
+            title = 'Chlorophyll (mg/m³)'
+        elif param.lower() == 'cdom':
+            cmap = 'YlOrBr'
+            title = 'CDOM (1/m)'
+        elif param.lower() == 'nap':
+            cmap = 'OrRd'
+            title = 'NAP (g/m³)'
+        else:
+            cmap = 'plasma'
+            title = param
+
+        # Plot the parameter map
+        im = ax.imshow(masked_data, cmap=cmap)
+        ax.set_title(title)
+        plt.colorbar(im, ax=ax)
+
+    # Plot error map
+    error_idx = len(param_names)
+    ax = fig_maps.add_subplot(gs[error_idx // n_cols, error_idx % n_cols])
+
+    # Get error data and mask invalid values
+    error_data = results['error']
+    masked_error = np.ma.masked_invalid(error_data)
+
+    # Plot the error map with a different colormap
+    im = ax.imshow(masked_error, cmap='Reds')
+    ax.set_title('Error (RMSE)')
+    plt.colorbar(im, ax=ax)
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Save figure if output directory is provided
+    if output_dir:
+        maps_filename = os.path.join(output_dir, f"{prefix}_parameter_maps.png")
+        plt.savefig(maps_filename, dpi=dpi, bbox_inches='tight')
+        print(f"Parameter maps saved to {maps_filename}")
+
+    figures['parameter_maps'] = fig_maps
+
+    # Create convergence map
+    if 'convergence' in results:
+        fig_conv = plt.figure(figsize=(10, 8))
+        ax = fig_conv.add_subplot(111)
+
+        # Create a custom colormap for boolean values
+        colors = [(0.8, 0.2, 0.2), (0.2, 0.8, 0.2)]  # Red to Green
+        cmap_name = 'convergence'
+        cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=2)
+
+        # Plot convergence map
+        im = ax.imshow(results['convergence'], cmap=cm)
+        ax.set_title('Convergence Status')
+
+        # Create custom colorbar with labels
+        cbar = plt.colorbar(im, ax=ax, ticks=[0.25, 0.75])
+        cbar.ax.set_yticklabels(['Failed', 'Converged'])
+
+        plt.tight_layout()
+
+        # Save figure if output directory is provided
+        if output_dir:
+            conv_filename = os.path.join(output_dir, f"{prefix}_convergence_map.png")
+            plt.savefig(conv_filename, dpi=dpi, bbox_inches='tight')
+            print(f"Convergence map saved to {conv_filename}")
+
+        figures['convergence_map'] = fig_conv
+
+    # Plot spectra for a sample pixel if provided
+    if sample_pixel and wavelengths is not None and observed_spectra is not None:
+        y, x = sample_pixel
+
+        # Check if the sample pixel is valid
+        if (0 <= y < results[param_names[0]].shape[0] and 
+            0 <= x < results[param_names[0]].shape[1] and
+            not np.isnan(results[param_names[0]][y, x])):
+
+            fig_spectra = plt.figure(figsize=(10, 6))
+            ax = fig_spectra.add_subplot(111)
+
+            # Get observed spectrum for this pixel
+            observed = observed_spectra[y, x, :]
+
+            # Plot observed spectrum
+            ax.plot(wavelengths, observed, 'o-', color='blue', label='Observed')
+
+            # If modeled_spectra is in the results, plot it
+            if 'modeled_spectra' in results:
+                modeled = results['modeled_spectra'][y, x, :]
+                ax.plot(wavelengths, modeled, 's--', color='red', label='Modeled')
+
+            ax.set_xlabel('Wavelength (nm)')
+            ax.set_ylabel('Remote Sensing Reflectance')
+            ax.set_title(f'Spectra at Pixel ({y}, {x})')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+
+            # Add parameter values as text
+#            param_text = "\n".join([f"{param}: {results[param][y, x]:.4f}" for param in param_names])
+            error_text = f"Error: {results['error'][y, x]:.4f}"
+ #           ax.text(0.02, 0.02, param_text + "\n" + error_text,
+    #               transform=ax.transAxes, bbox=dict(facecolor='white', alpha=0.7))
+
+            plt.tight_layout()
+
+            # Save figure if output directory is provided
+            if output_dir:
+                spectra_filename = os.path.join(output_dir, f"{prefix}_sample_spectra.png")
+                plt.savefig(spectra_filename, dpi=dpi, bbox_inches='tight')
+                print(f"Sample spectra saved to {spectra_filename}")
+
+            figures['sample_spectra'] = fig_spectra
+
+    # Show figures if requested
+    if show:
+        plt.show()
+
+    return figures

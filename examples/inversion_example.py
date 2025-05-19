@@ -3,18 +3,21 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import rasterio
+import time
+from datetime import datetime
 
 import sambuca_core as sbc
 from sambuca_core.inversion import InversionParameters, LookUpTable, process_image
+from sambuca_core.utility.plotting import plot_inversion_results
 
 # Add the new imports for NEDR support
 from sambuca_core.inversion.objective_functions import spectral_rmse_with_nedr
 
 # Define paths
-input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
+input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09_clipped2.tif')
 siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
 output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_nedr_{os.path.basename(input_)}")
-mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI.tiff')
+mask_input = os.path.join(os.path.dirname(input_), 'S2_L2A_20180508_B01-B05_ndwi_clipped2.tif')
 
 # Define the path to your NEDR CSV file
 nedr_csv = os.path.join(os.path.dirname(__file__), '..', 'data', 'nedr', 's2testc.csv')
@@ -106,8 +109,33 @@ nedr_values = np.array(nedr_values)
 # Now set NEDR values
 # params.set_nedr(nedr_values)
 
-# Now with NEDR weighting
-print("\nProcessing image with NEDR weighting...")
+# Print inversion settings
+print("\n" + "="*50)
+print("INVERSION SETTINGS:")
+print("="*50)
+print(f"Wavelengths: {wavelengths_used} nm")
+print(f"Parameters to invert: {params.get_inversion_parameter_names()}")
+print(f"Depth range: {params.depth}")
+print(f"Chlorophyll range: {params.chl}")
+if hasattr(params, 'cdom') and params.cdom is not None:
+    print(f"CDOM range: {params.cdom}")
+if hasattr(params, 'nap') and params.nap is not None:
+    print(f"NAP range: {params.nap}")
+print(f"Number of processes: 4")
+print(f"Number of starts: 10")
+print(f"Using NEDR weighting: Yes")
+print(f"NEDR values: {nedr_values}")
+print("="*50)
+
+# Create output directory for plots
+output_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', 'plots')
+os.makedirs(output_dir, exist_ok=True)
+
+# Record start time
+start_time = time.time()
+print(f"\nProcessing image with NEDR weighting... Started at {datetime.now().strftime('%H:%M:%S')}")
+
+# Process the image
 results_with_nedr = process_image(
     rrs_image,
     params,  # This now has NEDR values
@@ -118,6 +146,12 @@ results_with_nedr = process_image(
     n_starts=10,
     objective_function=spectral_rmse_with_nedr  # Use NEDR-weighted objective function
 )
+
+# Record end time and calculate elapsed time
+end_time = time.time()
+elapsed_time = end_time - start_time
+print(f"Processing completed at {datetime.now().strftime('%H:%M:%S')}")
+print(f"Total processing time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
 
 # Step 6: Save the final NEDR-based depth results
 depth_map = results_with_nedr['depth']
@@ -133,19 +167,93 @@ depth_meta.update({
 # Save depth results as a new GeoTIFF
 with rasterio.open(output_, 'w', **depth_meta) as dst:
     dst.write(depth_map.astype('float32'), 1)
+print(f"Depth map saved to {output_}")
 
-# Visualize the NEDR-based results
-plt.figure(figsize=(12, 8))
-plt.imshow(depth_map, cmap='viridis')
-plt.colorbar(label='Depth (m)')
-plt.title('Derived Bathymetry with NEDR Weighting')
-plt.savefig('bathymetry_map_nedr.png', dpi=300)
-plt.show()
+# Print comprehensive statistics for all parameters
+print("\n" + "="*50)
+print("INVERSION RESULTS STATISTICS:")
+print("="*50)
 
-# Calculate statistics on the NEDR-based results
-valid_depths = depth_map[~np.isnan(depth_map)]
-print(f"\nNEDR-weighted depth statistics:")
-print(f"  Min depth: {np.min(valid_depths):.2f} m")
-print(f"  Max depth: {np.max(valid_depths):.2f} m")
-print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
-print(f"  Median depth: {np.median(valid_depths):.2f} m")
+# Get all parameter names
+param_names = [key for key in results_with_nedr.keys() 
+              if key not in ['error', 'convergence', 'status']]
+
+# Calculate and print statistics for each parameter
+for param in param_names:
+    data = results_with_nedr[param]
+    valid_data = data[~np.isnan(data)]
+
+    if len(valid_data) > 0:
+        print(f"\n{param.upper()} STATISTICS:")
+        print(f"  Valid pixels: {len(valid_data)} of {np.size(data)} ({len(valid_data)/np.size(data)*100:.1f}%)")
+        print(f"  Min: {np.min(valid_data):.4f}")
+        print(f"  Max: {np.max(valid_data):.4f}")
+        print(f"  Mean: {np.mean(valid_data):.4f}")
+        print(f"  Median: {np.median(valid_data):.4f}")
+        print(f"  Std Dev: {np.std(valid_data):.4f}")
+
+# Print error statistics
+error_data = results_with_nedr['error']
+valid_error = error_data[~np.isnan(error_data)]
+if len(valid_error) > 0:
+    print("\nERROR STATISTICS:")
+    print(f"  Min error: {np.min(valid_error):.6f}")
+    print(f"  Max error: {np.max(valid_error):.6f}")
+    print(f"  Mean error: {np.mean(valid_error):.6f}")
+    print(f"  Median error: {np.median(valid_error):.6f}")
+
+# Print convergence statistics
+if 'convergence' in results_with_nedr:
+    converged = np.sum(results_with_nedr['convergence'])
+    total = np.size(results_with_nedr['convergence'])
+    print(f"\nCONVERGENCE STATISTICS:")
+    print(f"  Converged pixels: {converged} of {total} ({converged/total*100:.1f}%)")
+
+print("="*50)
+
+# Create comprehensive plots
+print("\nGenerating plots...")
+
+# Find a good sample pixel for spectrum plot
+# Look for a pixel with valid depth in the middle region of the image
+h, w = depth_map.shape
+center_y, center_x = h // 2, w // 2
+search_radius = min(h, w) // 4
+
+sample_pixel = None
+for r in range(search_radius):
+    for dy in range(-r, r+1):
+        for dx in range(-r, r+1):
+            if abs(dy) + abs(dx) == r:  # Diamond search pattern
+                y, x = center_y + dy, center_x + dx
+                if (0 <= y < h and 0 <= x < w and 
+                    not np.isnan(depth_map[y, x])):
+                    sample_pixel = (y, x)
+                    break
+        if sample_pixel:
+            break
+    if sample_pixel:
+        break
+
+if not sample_pixel:
+    # If no pixel found in center region, find any valid pixel
+    valid_coords = np.where(~np.isnan(depth_map))
+    if len(valid_coords[0]) > 0:
+        idx = len(valid_coords[0]) // 2  # Middle of valid pixels
+        sample_pixel = (valid_coords[0][idx], valid_coords[1][idx])
+
+# Generate comprehensive plots
+figures = plot_inversion_results(
+    results_with_nedr,
+    wavelengths=wavelengths_used,
+    output_dir=output_dir,
+    prefix='inversion_result',
+    figsize=(14, 10),
+    dpi=300,
+    show=True,
+    sample_pixel=sample_pixel,
+    observed_spectra=rrs_image
+)
+
+print(f"Plots saved to {output_dir}")
+print("\nInversion process completed successfully!")

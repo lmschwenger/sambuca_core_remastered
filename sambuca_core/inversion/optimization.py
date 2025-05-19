@@ -12,7 +12,7 @@ from numpy.typing import NDArray
 from scipy import optimize
 
 from ..forward_model import forward_model, ForwardModelResults
-from .objective_functions import spectral_rmse
+from .objective_functions import spectral_rmse_with_nedr
 from .parameters import InversionParameters
 
 
@@ -42,7 +42,7 @@ class OptimizationResult:
 def invert_spectrum(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse,
+        objective_function: Callable = spectral_rmse_with_nedr,
         initial_values: Optional[List[float]] = None,
         method: str = 'L-BFGS-B',
         options: Optional[Dict[str, Any]] = None,
@@ -76,7 +76,7 @@ def invert_spectrum(
 
     # Set default options
     if options is None:
-        options = {'maxiter': 5000, 'disp': False}
+        options = {'maxiter': 50000, 'disp': False}
 
     # Objective function wrapper
     def objective(x):
@@ -86,11 +86,17 @@ def invert_spectrum(
         else:
             return objective_function(x, observed_rrs, inversion_parameters)
 
+    low_relax = 0.7
+    high_relax = 1.3
+
+    cons = ({'type': 'ineq', 'fun': lambda x: high_relax - (x[4] + x[5] + x[6])},
+            {'type': 'ineq', 'fun': lambda x: (x[4] + x[5] + x[6]) - low_relax})
     # Perform optimization
     result = optimize.minimize(
         objective,
         initial_values,
         method=method,
+        constraints=cons,
         bounds=bounds,
         options=options
     )
@@ -127,7 +133,7 @@ def invert_spectrum(
 def multi_start_inversion(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse,
+        objective_function: Callable = spectral_rmse_with_nedr,
         n_starts: int = 5,
         initial_values: Optional[List[float]] = None,
         method: str = 'L-BFGS-B',
@@ -202,7 +208,7 @@ def multi_start_inversion(
 def grid_search(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse,
+        objective_function: Callable = spectral_rmse_with_nedr,
         grid_size: Union[int, List[int]] = 5,
 ) -> OptimizationResult:
     """Perform a grid search to find the best parameter set.
@@ -284,7 +290,7 @@ def grid_search(
 def optimize_from_grid(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse,
+        objective_function: Callable = spectral_rmse_with_nedr,
         grid_size: Union[int, List[int]] = 5,
         method: str = 'L-BFGS-B',
         options: Optional[Dict[str, Any]] = None,
