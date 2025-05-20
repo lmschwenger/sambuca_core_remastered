@@ -5,26 +5,20 @@ to derive water properties using the Sambuca inversion process, with
 optimizations for performance especially on Windows systems.
 """
 
-import os
-import multiprocessing as mp
-from functools import partial
-from typing import Dict, List, Tuple, Optional, Any, Union, Callable
 import concurrent.futures
+import os
+import time
+from typing import Dict, List, Tuple, Optional, Any
+
 import numpy as np
 from numpy.typing import NDArray
+import scipy.optimize as optimize
 from tqdm import tqdm
-import time
 
-from .optimization import invert_spectrum, multi_start_inversion
-from .parameters import InversionParameters
 from .lut import LookUpTable
-
-from ..forward_model import forward_model
-from .optimization import invert_spectrum, multi_start_inversion
 from .parameters import InversionParameters
-from .lut import LookUpTable
 from .scipy_objective import SciPyObjective  # Add this import
-from .objective_functions import distance_f  # Add this import
+from ..forward_model import forward_model
 
 
 def process_pixel(
@@ -34,24 +28,10 @@ def process_pixel(
         refinement: bool = True,
         use_multi_start: bool = False,
         n_starts: int = 5,
-        sensor_filter=None,  # Add this parameter
+        sensor_filter=None,
         **kwargs: Any,
 ) -> Dict[str, Any]:
-    """Process a single pixel spectrum.
-
-    Args:
-        pixel_spectra: Observed remote sensing reflectance for one pixel.
-        inversion_parameters: Parameters for the inversion process.
-        lut: Optional look-up table for faster inversion.
-        refinement: Whether to refine LUT results with optimization.
-        use_multi_start: Whether to use multi-start inversion.
-        n_starts: Number of starting points for multi-start inversion.
-        sensor_filter: Sensor filter for the SciPyObjective.
-        **kwargs: Additional arguments passed to invert_spectrum or lut.invert.
-
-    Returns:
-        Dictionary with inverted parameters and metadata.
-    """
+    """Process a single pixel spectrum with improved performance."""
     # Check for invalid pixel
     if np.any(np.isnan(pixel_spectra)) or np.any(pixel_spectra < 0):
         return {
@@ -70,102 +50,120 @@ def process_pixel(
 
             lut_result = lut.invert(pixel_spectra, refine=refinement, **kwargs)
 
-            # If using multi-start refinement after LUT
-            if refinement and use_multi_start:
-                # Use LUT result as one of the starting points
-                lut_params = [lut_result['parameters'][p] for p in inversion_parameters.get_inversion_parameter_names()]
-
-                # Create SciPyObjective for multi-start
-                nedr_values = inversion_parameters.nedr if hasattr(inversion_parameters, 'nedr') else None
-                objective = SciPyObjective(
-                    sensor_filter=sensor_filter,
-                    fixed_parameters=inversion_parameters,
-                    error_function=distance_f,
-                    nedr=nedr_values
-                )
-                objective._observed_rrs = pixel_spectra
-
-                # Perform multi-start optimization using SciPyObjective
-                result = multi_start_with_objective(
-                    objective,
-                    inversion_parameters,
-                    n_starts=n_starts,
-                    initial_values=lut_params,
-                    **kwargs
-                )
-
-                return {
-                    'parameters': result['parameters'],
-                    'error': result['error'],
-                    'modeled_spectra': result['modeled_spectra'],
-                    'convergence': result['convergence'],
-                    'status': 'multi_start_after_lut',
-                    'lut_result': lut_result  # Keep LUT result for comparison
-                }
-            else:
+            # If no further refinement needed, return the LUT result
+            if not (refinement and use_multi_start):
                 return lut_result
+
+            # Otherwise use LUT result as initial value for optimization
+            kwargs['initial_values'] = [lut_result['parameters'][p] for p in
+                                        inversion_parameters.get_inversion_parameter_names()]
 
         except Exception as e:
             # Fall back to optimization if LUT fails
             pass
 
-    # Use multi-start or regular optimization with SciPyObjective
+    # OPTIMIZATION APPROACH
     try:
-        # Ensure sensor_filter is provided
-        if sensor_filter is None:
-            raise ValueError("sensor_filter must be provided for inversion")
-
-        # Create a SciPyObjective instance
-        nedr_values = inversion_parameters.nedr if hasattr(inversion_parameters, 'nedr') else None
-        objective = SciPyObjective(
-            sensor_filter=sensor_filter,
-            fixed_parameters=inversion_parameters,
-            error_function=distance_f,
-            nedr=nedr_values
-        )
-
-        # Set the observed rrs for this pixel
-        objective._observed_rrs = pixel_spectra
-
-        # Get the parameter bounds
+        # Get optimization parameters
         bounds = inversion_parameters.get_parameter_bounds()
         param_names = inversion_parameters.get_inversion_parameter_names()
-
-        # Get initial values
         initial_values = kwargs.get('initial_values', inversion_parameters.get_initial_values())
-
-        # Set up constraints (similar to SWAMpy)
-        low_relax = kwargs.get('low_relax', 0.7)
-        high_relax = kwargs.get('high_relax', 1.3)
-        substrate_indices = kwargs.get('substrate_indices', [4, 5, 6])  # Default as in SWAMpy
-
-        cons = [
-            {'type': 'ineq', 'fun': lambda x: high_relax - sum(x[i] for i in substrate_indices if i < len(x))},
-            {'type': 'ineq', 'fun': lambda x: sum(x[i] for i in substrate_indices if i < len(x)) - low_relax}
-        ]
-
-        # Get optimization method and options
         method = kwargs.get('method', 'SLSQP')
         options = kwargs.get('options', {'disp': False, 'maxiter': 5000})
 
-        if use_multi_start:
-            # Perform multi-start optimization
-            result = multi_start_with_objective(
-                objective,
-                inversion_parameters,
-                n_starts=n_starts,
-                method=method,
-                constraints=cons,
-                options=options,
-                **kwargs
-            )
+        # Prepare NEDR values if available
+        nedr_values = inversion_parameters.nedr if hasattr(inversion_parameters, 'nedr') else None
 
-            return result
+        # Define simple objective function instead of creating a class instance
+        def objective_function(params):
+            # Convert params to forward model inputs
+            forward_params = inversion_parameters.get_forward_model_params(params)
+
+            # Run forward model
+            results = forward_model(**forward_params)
+
+            # Calculate error with optional NEDR weighting
+            if nedr_values is not None:
+                weights = 1.0 / (nedr_values ** 2)
+                squared_diff = (results.rrs - pixel_spectra) ** 2
+                weighted_squared_diff = weights * squared_diff
+                error = np.sqrt(np.sum(weighted_squared_diff) / np.sum(weights))
+            else:
+                error = np.sqrt(np.mean((results.rrs - pixel_spectra) ** 2))
+
+            return error
+
+        # Simplified constraints handling
+        substrate_indices = kwargs.get('substrate_indices', [])
+        low_relax = kwargs.get('low_relax', 0.7)
+        high_relax = kwargs.get('high_relax', 1.3)
+
+        # Only add constraints if we actually have substrate indices
+        if substrate_indices:
+            cons = [
+                {'type': 'ineq', 'fun': lambda x: high_relax - sum(x[i] for i in substrate_indices if i < len(x))},
+                {'type': 'ineq', 'fun': lambda x: sum(x[i] for i in substrate_indices if i < len(x)) - low_relax}
+            ]
         else:
-            # Run single optimization
-            from scipy import optimize
-            opt_result = optimize.minimize(
-                objective,
+            cons = []
+
+        # Run optimization approach based on multi_start flag
+        if use_multi_start:
+            # Multiple starting points
+            best_result = None
+            best_error = float('inf')
+
+            # Try with multiple starting points
+            for _ in range(n_starts):
+                # Generate random starting point
+                random_start = []
+                for lower, upper in bounds:
+                    random_start.append(lower + np.random.random() * (upper - lower))
+
+                result = optimize.minimize(
+                    objective_function,
+                    random_start,
+                    method=method,
+                    bounds=bounds,
+                    constraints=cons,
+                    options=options
+                )
+
+                if result.fun < best_error and result.success:
+                    best_error = result.fun
+                    best_result = result
+
+            # Try with provided initial values if given
+            if initial_values is not None:
+                result = optimize.minimize(
+                    objective_function,
+                    initial_values,
+                    method=method,
+                    bounds=bounds,
+                    constraints=cons,
+                    options=options
+                )
+
+                if result.fun < best_error and result.success:
+                    best_error = result.fun
+                    best_result = result
+
+            result = best_result
+
+            # Fall back to single optimization if no successful result found
+            if result is None:
+                result = optimize.minimize(
+                    objective_function,
+                    initial_values if initial_values is not None else inversion_parameters.get_initial_values(),
+                    method=method,
+                    bounds=bounds,
+                    constraints=cons,
+                    options=options
+                )
+        else:
+            # Single optimization
+            result = optimize.minimize(
+                objective_function,
                 initial_values,
                 method=method,
                 bounds=bounds,
@@ -173,24 +171,26 @@ def process_pixel(
                 options=options
             )
 
-            # Run forward model to get modeled spectra
-            forward_params = inversion_parameters.get_forward_model_params(opt_result.x)
-            forward_result = forward_model(**forward_params)
+        # Run forward model to get modeled spectra
+        forward_params = inversion_parameters.get_forward_model_params(result.x)
+        forward_result = forward_model(**forward_params)
 
-            # Create parameter dictionary
-            param_dict = {name: value for name, value in zip(param_names, opt_result.x)}
+        # Create parameter dictionary
+        param_dict = {name: value for name, value in zip(param_names, result.x)}
 
-            return {
-                'parameters': param_dict,
-                'error': opt_result.fun,
-                'modeled_spectra': forward_result.rrs,
-                'convergence': opt_result.success,
-                'status': 'optimization_success',
-                'iterations': opt_result.nit,
-                'message': opt_result.message,
-            }
+        return {
+            'parameters': param_dict,
+            'error': result.fun,
+            'modeled_spectra': forward_result.rrs,
+            'convergence': result.success,
+            'status': 'multi_start_success' if use_multi_start else 'optimization_success',
+            'iterations': result.nit if hasattr(result, 'nit') else None,
+            'message': result.message if hasattr(result, 'message') else None,
+            'forward_model_results': forward_result
+        }
+
     except Exception as e:
-        # Handle inversion failures
+        # Handle any errors during optimization
         return {
             'parameters': {p: float('nan') for p in inversion_parameters.get_inversion_parameter_names()},
             'error': float('nan'),
@@ -199,6 +199,33 @@ def process_pixel(
             'status': f"{'multi_start' if use_multi_start else 'optimization'}_failed",
             'error_message': str(e),
         }
+
+
+# Function to process a batch of pixels (optimized to remove debug print)
+def _process_pixel_batch(batch_data):
+    """Process a batch of pixels."""
+    pixel_indices, pixel_coords, image_data, inversion_parameters, lut, kwargs = batch_data
+    results = []
+
+    # Extract sensor_filter
+    sensor_filter = kwargs.get('sensor_filter', None)
+
+    # Ensure sensor_filter is provided
+    if sensor_filter is None:
+        raise ValueError("sensor_filter must be provided for inversion")
+
+    for i, idx in enumerate(pixel_indices):
+        # Remove the debug print that was here
+        y, x = pixel_coords[i]
+        pixel_spectra = image_data[y, x, :]
+        results.append((idx, process_pixel(
+            pixel_spectra,
+            inversion_parameters,
+            lut,
+            **kwargs
+        )))
+
+    return results
 
 
 # Helper function for multi-start optimization with SciPyObjective
@@ -317,40 +344,6 @@ def multi_start_with_objective(
         'iterations': best_result.nit,
         'message': best_result.message,
     }
-
-# Function to process a batch of pixels (used by both ThreadPoolExecutor and ProcessPoolExecutor)
-def _process_pixel_batch(batch_data):
-    """Process a batch of pixels.
-
-    Args:
-        batch_data: Tuple containing (pixel_indices, pixel_coords, image_data,
-                    inversion_parameters, lut, kwargs)
-
-    Returns:
-        List of (index, result) tuples
-    """
-    pixel_indices, pixel_coords, image_data, inversion_parameters, lut, kwargs = batch_data
-    results = []
-
-    # Extract sensor_filter
-    sensor_filter = kwargs.get('sensor_filter', None)
-
-    # Ensure sensor_filter is provided
-    if sensor_filter is None:
-        raise ValueError("sensor_filter must be provided for inversion")
-
-    for i, idx in enumerate(pixel_indices):
-        print(f"{i} / {len(pixel_indices)}")
-        y, x = pixel_coords[i]
-        pixel_spectra = image_data[y, x, :]
-        results.append((idx, process_pixel(
-            pixel_spectra,
-            inversion_parameters,
-            lut,
-            **kwargs
-        )))
-
-    return results
 
 
 def process_image(
@@ -514,7 +507,7 @@ def process_image(
         valid_depths = output['depth'][valid_mask]
         if len(valid_depths) > 0:
             print(f"Depth statistics:")
-            print(f"  Valid pixels: {len(valid_depths)} of {n_pixels} ({len(valid_depths)/n_pixels*100:.1f}%)")
+            print(f"  Valid pixels: {len(valid_depths)} of {n_pixels} ({len(valid_depths) / n_pixels * 100:.1f}%)")
             print(f"  Min depth: {np.min(valid_depths):.2f} m")
             print(f"  Max depth: {np.max(valid_depths):.2f} m")
             print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
@@ -667,7 +660,7 @@ def batch_process_image(
                 if valid_pixels > 0:
                     valid_depths = output['depth'][valid_mask]
                     print(f"Progress after {batch_count}/{total_batches} batches:")
-                    print(f"  Valid pixels: {valid_pixels} ({valid_pixels/(height*width)*100:.1f}%)")
+                    print(f"  Valid pixels: {valid_pixels} ({valid_pixels / (height * width) * 100:.1f}%)")
                     print(f"  Depth range: {np.min(valid_depths):.2f} - {np.max(valid_depths):.2f} m")
                     print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
 
@@ -691,7 +684,8 @@ def batch_process_image(
             valid_depths = output['depth'][valid_mask]
             if len(valid_depths) > 0:
                 print("\nFinal depth statistics:")
-                print(f"  Valid pixels: {np.sum(valid_mask)} of {height*width} ({np.sum(valid_mask)/(height*width)*100:.1f}%)")
+                print(
+                    f"  Valid pixels: {np.sum(valid_mask)} of {height * width} ({np.sum(valid_mask) / (height * width) * 100:.1f}%)")
                 print(f"  Min depth: {np.min(valid_depths):.2f} m")
                 print(f"  Max depth: {np.max(valid_depths):.2f} m")
                 print(f"  Mean depth: {np.mean(valid_depths):.2f} m")

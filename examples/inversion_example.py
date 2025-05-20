@@ -90,9 +90,9 @@ siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
 params = InversionParameters(
     # Parameters to invert for
     depth=(0.1, 10.0),
-    fixed_chl=2.4,
-   # cdom=(0.0005, 0.01),
-   # nap=(0.01, 0.5)
+   # chl=(0.5, 3),
+ #   cdom=(0.0005, 0.01),
+ #   nap=(0.01, 0.5)
 )
 
 # Load SIOPs for this sensor
