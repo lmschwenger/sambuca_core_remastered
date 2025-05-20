@@ -1,4 +1,6 @@
 import os
+import warnings
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +12,8 @@ import sambuca_core as sbc
 from sambuca_core.inversion import InversionParameters, LookUpTable, process_image
 from sambuca_core.utility.plotting import plot_inversion_results
 
+warnings.filterwarnings('ignore', category=RuntimeWarning)
+
 # Add the new imports for NEDR support
 from sambuca_core.inversion.objective_functions import spectral_rmse_with_nedr
 
@@ -18,7 +22,7 @@ input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_
 siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
 output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_nedr_{os.path.basename(input_)}")
 mask_input = os.path.join(os.path.dirname(input_), 'S2_L2A_20180508_B01-B05_ndwi_clipped2.tif')
-
+sensor_filter_input = os.path.join(os.path.dirname(input_), '..', 'sensor_filters', 'sensor_filters.csv')
 # Define the path to your NEDR CSV file
 nedr_csv = os.path.join(os.path.dirname(__file__), '..', 'data', 'nedr', 's2testc.csv')
 
@@ -86,9 +90,9 @@ siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
 params = InversionParameters(
     # Parameters to invert for
     depth=(0.1, 10.0),
-    chl=(0.01, 2.0),
-    #  cdom=(0.0005, 0.01),
-    #  nap=(0.01, 0.5)
+    fixed_chl=2.4,
+   # cdom=(0.0005, 0.01),
+   # nap=(0.01, 0.5)
 )
 
 # Load SIOPs for this sensor
@@ -107,7 +111,7 @@ for wl in wavelengths_used:
 nedr_values = np.array(nedr_values)
 
 # Now set NEDR values
-# params.set_nedr(nedr_values)
+params.set_nedr(nedr_values)
 
 # Print inversion settings
 print("\n" + "="*50)
@@ -135,6 +139,8 @@ os.makedirs(output_dir, exist_ok=True)
 start_time = time.time()
 print(f"\nProcessing image with NEDR weighting... Started at {datetime.now().strftime('%H:%M:%S')}")
 
+sensor_filter = sbc.load_sensor_filter_from_csv(filename=sensor_filter_input)
+
 # Process the image
 results_with_nedr = process_image(
     rrs_image,
@@ -142,9 +148,9 @@ results_with_nedr = process_image(
     mask=data_mask,
     lut=None,
     n_processes=4,
+    sensor_filter=sensor_filter,
     progress_bar=True,
-    n_starts=10,
-    objective_function=spectral_rmse_with_nedr  # Use NEDR-weighted objective function
+    n_starts=2,  # Use NEDR-weighted objective function
 )
 
 # Record end time and calculate elapsed time

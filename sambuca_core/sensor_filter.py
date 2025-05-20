@@ -243,6 +243,29 @@ def load_sensor_filters(
             if name not in sensor_filters:
                 sensor_filters[name] = loaded_filter
     except UnsupportedDataFormatError:
-        pass
+        raise UnsupportedDataFormatError("Unsupported sensor filter format")
 
     return sensor_filters
+
+
+def load_sensor_filter_from_csv(filename):
+    """Load a sensor filter from a CSV file.
+
+    Args:
+        filename: Path to the CSV file containing the sensor filter.
+
+    Returns:
+        Tuple containing (wavelengths, filter_responses)
+    """
+    # Load the CSV file
+    filter_df = pd.read_csv(filename, index_col=0)
+
+    # Extract wavelengths and filter responses
+    wavelengths = np.array(filter_df.index, dtype=float)
+    filter_responses = np.array(filter_df.values, dtype=float).T  # Transpose to get bands as rows
+
+    # Check validity (optional)
+    if np.all(filter_responses == 0):
+        raise ValueError("Filter responses are all zero. Check your CSV file.")
+
+    return wavelengths, filter_responses

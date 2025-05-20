@@ -44,7 +44,7 @@ def invert_spectrum(
         inversion_parameters: InversionParameters,
         objective_function: Callable = spectral_rmse_with_nedr,
         initial_values: Optional[List[float]] = None,
-        method: str = 'L-BFGS-B',
+        method: str = 'SLSQP',
         options: Optional[Dict[str, Any]] = None,
 ) -> OptimizationResult:
     """Invert a single spectrum to derive water properties.
@@ -76,7 +76,7 @@ def invert_spectrum(
 
     # Set default options
     if options is None:
-        options = {'maxiter': 50000, 'disp': False}
+        options = {'maxiter': 5000, 'disp': False}
 
     # Objective function wrapper
     def objective(x):
@@ -94,7 +94,7 @@ def invert_spectrum(
     # Perform optimization
     result = optimize.minimize(
         objective,
-        initial_values,
+        np.array(initial_values),
         method=method,
         constraints=cons,
         bounds=bounds,
@@ -136,7 +136,7 @@ def multi_start_inversion(
         objective_function: Callable = spectral_rmse_with_nedr,
         n_starts: int = 5,
         initial_values: Optional[List[float]] = None,
-        method: str = 'L-BFGS-B',
+        method: str = 'SLSQP',
         options: Optional[Dict[str, Any]] = None,
 ) -> OptimizationResult:
     """Perform multi-start inversion to avoid local minima.
@@ -292,7 +292,7 @@ def optimize_from_grid(
         inversion_parameters: InversionParameters,
         objective_function: Callable = spectral_rmse_with_nedr,
         grid_size: Union[int, List[int]] = 5,
-        method: str = 'L-BFGS-B',
+        method: str = 'SLSQP',
         options: Optional[Dict[str, Any]] = None,
 ) -> OptimizationResult:
     """Perform a grid search followed by local optimization.

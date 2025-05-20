@@ -240,3 +240,60 @@ def spectral_rmse_with_nedr(
         }
 
     return error
+
+
+def distance_f(
+        params: List[float],
+        observed_rrs: NDArray[np.float64],
+        inversion_parameters: 'InversionParameters',
+        nedr: Optional[NDArray[np.float64]] = None,
+        return_modeled_spectra: bool = False,
+) -> Union[float, Dict[str, Any]]:
+    """Calculate a weighted distance measure between observed and modeled spectra.
+
+    This function implements the distance_f error metric used in the original SWAMpy
+    implementation, which is a weighted spectral distance measure that accounts for
+    the noise characteristics of the sensor.
+
+    Args:
+        params: Optimization parameters (values for the parameters being inverted).
+        observed_rrs: Observed remote sensing reflectance.
+        inversion_parameters: Parameters for the inversion process.
+        nedr: Noise equivalent delta reflectance values for each band.
+            If None, uniform weighting is used.
+        return_modeled_spectra: If True, return a dictionary with error and modeled spectra.
+
+    Returns:
+        The weighted spectral distance, or a dictionary with error and modeled
+        spectra if return_modeled_spectra is True.
+    """
+    # Convert params to forward model inputs
+    forward_model_params = inversion_parameters.get_forward_model_params(params)
+
+    # Run forward model
+    results = forward_model(**forward_model_params)
+
+    # Calculate distance with optional NEDR weighting
+    if nedr is not None:
+        # Apply NEDR weighting - higher weight for bands with lower noise
+        # Use inverse variance weighting (1/sigma^2)
+        weights = 1.0 / (nedr ** 2)
+
+        # Calculate weighted sum of squared differences
+        squared_diff = (results.rrs - observed_rrs) ** 2
+        weighted_squared_diff = weights * squared_diff
+
+        # Normalize by sum of weights
+        distance = np.sqrt(np.sum(weighted_squared_diff) / np.sum(weights))
+    else:
+        # Standard RMSE if no NEDR provided
+        distance = np.sqrt(np.mean((results.rrs - observed_rrs) ** 2))
+
+    if return_modeled_spectra:
+        return {
+            'error': distance,
+            'modeled_spectra': results.rrs,
+            'forward_model_results': results
+        }
+
+    return distance
