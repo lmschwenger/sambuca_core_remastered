@@ -15,6 +15,7 @@ from numpy.typing import NDArray
 import scipy.optimize as optimize
 from tqdm import tqdm
 
+from . import multi_start_inversion, invert_spectrum
 from .lut import LookUpTable
 from .parameters import InversionParameters
 from .scipy_objective import SciPyObjective  # Add this import
@@ -28,10 +29,22 @@ def process_pixel(
         refinement: bool = True,
         use_multi_start: bool = False,
         n_starts: int = 5,
-        sensor_filter=None,
         **kwargs: Any,
 ) -> Dict[str, Any]:
-    """Process a single pixel spectrum with improved performance."""
+    """Process a single pixel spectrum.
+
+    Args:
+        pixel_spectra: Observed remote sensing reflectance for one pixel.
+        inversion_parameters: Parameters for the inversion process.
+        lut: Optional look-up table for faster inversion.
+        refinement: Whether to refine LUT results with optimization.
+        use_multi_start: Whether to use multi-start inversion.
+        n_starts: Number of starting points for multi-start inversion.
+        **kwargs: Additional arguments passed to invert_spectrum or lut.invert.
+
+    Returns:
+        Dictionary with inverted parameters and metadata.
+    """
     # Check for invalid pixel
     if np.any(np.isnan(pixel_spectra)) or np.any(pixel_spectra < 0):
         return {
@@ -50,156 +63,100 @@ def process_pixel(
 
             lut_result = lut.invert(pixel_spectra, refine=refinement, **kwargs)
 
-            # If no further refinement needed, return the LUT result
-            if not (refinement and use_multi_start):
-                return lut_result
+            # If using multi-start refinement after LUT
+            if refinement and use_multi_start:
+                try:
+                    # Import here to avoid circular imports
+                    from .parallel_processor import parallel_inversion
 
-            # Otherwise use LUT result as initial value for optimization
-            kwargs['initial_values'] = [lut_result['parameters'][p] for p in
-                                        inversion_parameters.get_inversion_parameter_names()]
+                    # Use parallel inversion with LUT result as one of the starting points
+                    result = parallel_inversion(
+                        pixel_spectra,
+                        inversion_parameters,
+                        n_starts=n_starts,
+                        **kwargs
+                    )
+
+                    return {
+                        'parameters': result.parameters,
+                        'error': result.objective_value,
+                        'modeled_spectra': result.modeled_spectra,
+                        'convergence': result.convergence_status,
+                        'status': 'parallel_multi_start_after_lut',
+                        'lut_result': lut_result  # Keep LUT result for comparison
+                    }
+                except ImportError:
+                    # Fallback to regular multi-start if parallel version fails
+                    lut_params = [lut_result['parameters'][p] for p in
+                                  inversion_parameters.get_inversion_parameter_names()]
+                    result = multi_start_inversion(
+                        pixel_spectra,
+                        inversion_parameters,
+                        n_starts=n_starts,
+                        **kwargs
+                    )
+                    return {
+                        'parameters': result.parameters,
+                        'error': result.objective_value,
+                        'modeled_spectra': result.modeled_spectra,
+                        'convergence': result.convergence_status,
+                        'status': 'multi_start_after_lut',
+                        'lut_result': lut_result  # Keep LUT result for comparison
+                    }
+            else:
+                return lut_result
 
         except Exception as e:
             # Fall back to optimization if LUT fails
             pass
 
-    # OPTIMIZATION APPROACH
+    # Use multi-start or regular optimization
     try:
-        # Get optimization parameters
-        bounds = inversion_parameters.get_parameter_bounds()
-        param_names = inversion_parameters.get_inversion_parameter_names()
-        initial_values = kwargs.get('initial_values', inversion_parameters.get_initial_values())
-        method = kwargs.get('method', 'SLSQP')
-        options = kwargs.get('options', {'disp': False, 'maxiter': 5000})
+        if hasattr(inversion_parameters, 'nedr') and inversion_parameters.nedr is not None:
+            from .objective_functions import spectral_rmse_with_nedr
+            kwargs['objective_function'] = spectral_rmse_with_nedr
 
-        # Prepare NEDR values if available
-        nedr_values = inversion_parameters.nedr if hasattr(inversion_parameters, 'nedr') else None
-
-        # Define simple objective function instead of creating a class instance
-        def objective_function(params):
-            # Convert params to forward model inputs
-            forward_params = inversion_parameters.get_forward_model_params(params)
-
-            # Run forward model
-            results = forward_model(**forward_params)
-
-            # Calculate error with optional NEDR weighting
-            if nedr_values is not None:
-                weights = 1.0 / (nedr_values ** 2)
-                squared_diff = (results.rrs - pixel_spectra) ** 2
-                weighted_squared_diff = weights * squared_diff
-                error = np.sqrt(np.sum(weighted_squared_diff) / np.sum(weights))
-            else:
-                error = np.sqrt(np.mean((results.rrs - pixel_spectra) ** 2))
-
-            return error
-
-        # Simplified constraints handling
-        substrate_indices = kwargs.get('substrate_indices', [])
-        low_relax = kwargs.get('low_relax', 0.7)
-        high_relax = kwargs.get('high_relax', 1.3)
-
-        # Only add constraints if we actually have substrate indices
-        if substrate_indices:
-            cons = [
-                {'type': 'ineq', 'fun': lambda x: high_relax - sum(x[i] for i in substrate_indices if i < len(x))},
-                {'type': 'ineq', 'fun': lambda x: sum(x[i] for i in substrate_indices if i < len(x)) - low_relax}
-            ]
-        else:
-            cons = []
-
-        # Run optimization approach based on multi_start flag
         if use_multi_start:
-            # Multiple starting points
-            best_result = None
-            best_error = float('inf')
-
-            # Try with multiple starting points
-            for _ in range(n_starts):
-                # Generate random starting point
-                random_start = []
-                for lower, upper in bounds:
-                    random_start.append(lower + np.random.random() * (upper - lower))
-
-                result = optimize.minimize(
-                    objective_function,
-                    random_start,
-                    method=method,
-                    bounds=bounds,
-                    constraints=cons,
-                    options=options
+            try:
+                # Try using the parallel implementation first
+                from .parallel_processor import parallel_inversion
+                result = parallel_inversion(
+                    pixel_spectra,
+                    inversion_parameters,
+                    n_starts=n_starts,
+                    **kwargs
                 )
-
-                if result.fun < best_error and result.success:
-                    best_error = result.fun
-                    best_result = result
-
-            # Try with provided initial values if given
-            if initial_values is not None:
-                result = optimize.minimize(
-                    objective_function,
-                    initial_values,
-                    method=method,
-                    bounds=bounds,
-                    constraints=cons,
-                    options=options
+                status = 'parallel_multi_start_success'
+            except ImportError:
+                # Fall back to regular multi-start if parallel version is not available
+                result = multi_start_inversion(
+                    pixel_spectra,
+                    inversion_parameters,
+                    n_starts=n_starts,
+                    **kwargs
                 )
-
-                if result.fun < best_error and result.success:
-                    best_error = result.fun
-                    best_result = result
-
-            result = best_result
-
-            # Fall back to single optimization if no successful result found
-            if result is None:
-                result = optimize.minimize(
-                    objective_function,
-                    initial_values if initial_values is not None else inversion_parameters.get_initial_values(),
-                    method=method,
-                    bounds=bounds,
-                    constraints=cons,
-                    options=options
-                )
+                status = 'multi_start_success'
         else:
-            # Single optimization
-            result = optimize.minimize(
-                objective_function,
-                initial_values,
-                method=method,
-                bounds=bounds,
-                constraints=cons,
-                options=options
-            )
-
-        # Run forward model to get modeled spectra
-        forward_params = inversion_parameters.get_forward_model_params(result.x)
-        forward_result = forward_model(**forward_params)
-
-        # Create parameter dictionary
-        param_dict = {name: value for name, value in zip(param_names, result.x)}
+            result = invert_spectrum(pixel_spectra, inversion_parameters, **kwargs)
+            status = 'optimization_success'
 
         return {
-            'parameters': param_dict,
-            'error': result.fun,
-            'modeled_spectra': forward_result.rrs,
-            'convergence': result.success,
-            'status': 'multi_start_success' if use_multi_start else 'optimization_success',
-            'iterations': result.nit if hasattr(result, 'nit') else None,
-            'message': result.message if hasattr(result, 'message') else None,
-            'forward_model_results': forward_result
+            'parameters': result.parameters,
+            'error': result.objective_value,
+            'modeled_spectra': result.modeled_spectra,
+            'convergence': result.convergence_status,
+            'status': status,
         }
-
     except Exception as e:
-        # Handle any errors during optimization
+        # Handle inversion failures
         return {
             'parameters': {p: float('nan') for p in inversion_parameters.get_inversion_parameter_names()},
             'error': float('nan'),
             'modeled_spectra': np.full_like(pixel_spectra, float('nan')),
             'convergence': False,
-            'status': f"{'multi_start' if use_multi_start else 'optimization'}_failed",
+            'status': 'multi_start_failed' if use_multi_start else 'optimization_failed',
             'error_message': str(e),
         }
-
 
 # Function to process a batch of pixels (optimized to remove debug print)
 def _process_pixel_batch(batch_data):
