@@ -113,8 +113,8 @@ def process_pixel(
     # Use multi-start or regular optimization
     try:
         if hasattr(inversion_parameters, 'nedr') and inversion_parameters.nedr is not None:
-            from .objective_functions import spectral_rmse_with_nedr
-            kwargs['objective_function'] = spectral_rmse_with_nedr
+            from .objective_functions import distance_f
+            kwargs['objective_function'] = distance_f
 
         if use_multi_start:
             try:
@@ -161,11 +161,8 @@ def process_pixel(
 # Function to process a batch of pixels (optimized to remove debug print)
 def _process_pixel_batch(batch_data):
     """Process a batch of pixels."""
-    pixel_indices, pixel_coords, image_data, inversion_parameters, lut, kwargs = batch_data
+    pixel_indices, pixel_coords, image_data, inversion_parameters, lut, sensor_filter = batch_data
     results = []
-
-    # Extract sensor_filter
-    sensor_filter = kwargs.get('sensor_filter', None)
 
     # Ensure sensor_filter is provided
     if sensor_filter is None:
@@ -179,7 +176,8 @@ def _process_pixel_batch(batch_data):
             pixel_spectra,
             inversion_parameters,
             lut,
-            **kwargs
+            sensor_filter=sensor_filter
+
         )))
 
     return results
@@ -303,6 +301,12 @@ def multi_start_with_objective(
     }
 
 
+"""
+This file contains the required updates to pixel_processor.py
+to make it compatible with the parallel processing features.
+"""
+
+# Update the process_image function to handle parallel processing appropriately
 def process_image(
         image: NDArray[np.float64],
         inversion_parameters: InversionParameters,
@@ -314,7 +318,7 @@ def process_image(
         use_threads: bool = True,
         use_multi_start: bool = False,
         n_starts: int = 5,
-        sensor_filter=None,  # Add this parameter
+        sensor_filter=None,
         **kwargs: Any,
 ) -> Dict[str, NDArray]:
     """Process an entire image to derive water properties with optimized performance.

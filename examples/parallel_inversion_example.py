@@ -29,10 +29,10 @@ except ImportError:
 def main():
     """Run the parallel inversion example."""
     # Define paths - adjust these as needed
-    input_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09_clipped2.tif')
-    mask_input = os.path.join(os.path.dirname(input_file), 'S2_L2A_20180508_B01-B05_ndwi_clipped2.tif')
+    input_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'images', 'Browser_images_clipped.tif')
+    mask_input = os.path.join(os.path.dirname(input_file), 'Browser_images__ndwi_clipped.tif')
     siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
-    sensor_filter_input = os.path.join(os.path.dirname(input_file), '..', 'sensor_filters', 'sensor_filters.csv')
+    sensor_filter_input = os.path.join(os.path.dirname(input_file), '..', '..', 'sensor_filters', 'sensor_filters.csv')
     output_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'output')
 
     # Create output directory if it doesn't exist
@@ -62,7 +62,7 @@ def main():
     # Load the image
     with rasterio.open(input_file) as src:
         # Read all bands
-        image_int16 = src.read()[:len(bands_used), :, :]
+        image_int16 = src.read()[1:5, :, :]
         metadata = src.meta
 
         # Use appropriate scaling factor
@@ -95,9 +95,11 @@ def main():
     # Create inversion parameters
     params = InversionParameters(
         # Parameters to invert for (with bounds)
-        depth=(0.1, 20.0),
-        chl=(0.1, 10.0),
-        cdom=(0.01, 1.0),
+        depth=(0.1, 10.0),
+        chl=(1, 2.2),
+        cdom=(0.0001, .0021),
+        nap=(0, 1),
+    #    substrate_fraction=(0, 1)
     )
 
     # Update parameters from SIOP manager
@@ -118,14 +120,22 @@ def main():
     start_time = time.time()
 
     # For demonstration, let's use a small subset of the image
-    subset_size = 100
+    subset_size = 500
     h, w = rrs_image.shape[:2]
     start_h, start_w = h // 2 - subset_size // 2, w // 2 - subset_size // 2
     rrs_subset = rrs_image[start_h:start_h + subset_size, start_w:start_w + subset_size, :]
     mask_subset = data_mask[start_h:start_h + subset_size, start_w:start_w + subset_size]
 
+    use_subset = False
+    if use_subset:
+        rrs_to_use = rrs_subset
+        mask_to_use = mask_subset
+    else:
+        rrs_to_use = rrs_image
+        mask_to_use = data_mask
+
     # Run parallel processing on the subset
-    print(f"\nProcessing image subset of shape {rrs_subset.shape}...")
+    print(f"\nProcessing image subset of shape {rrs_to_use.shape}...")
 
     # Compare parallel vs. non-parallel processing
     results = {}
@@ -133,26 +143,24 @@ def main():
     # Process with different configurations
     configs = [
         # name, use_multi_start, n_processes, parallel_batch_processing
-        ("Sequential", True, 1, False),
-        ("Multi-start", True, 1, False),
     ]
 
     if PARALLEL_AVAILABLE:
         configs.extend([
             ("Parallel", True, 4, True),
-            ("Parallel Multi-start", True, 4, True),
         ])
 
     sensor_filter = sbc.load_sensor_filter_from_csv(filename=sensor_filter_input)
-
+    wl, responses = sensor_filter
+    sensor_filter = tuple((wl, responses[1:]))
     for name, use_multi_start, n_processes, parallel_batch_processing in configs:
         print(f"\nRunning {name} inversion...")
         config_start_time = time.time()
 
         results[name] = process_image(
-            rrs_image,
+            rrs_to_use,
             params,
-            mask=data_mask,
+            mask=mask_to_use,
             n_processes=n_processes,
             progress_bar=True,
             sensor_filter=sensor_filter,

@@ -46,6 +46,7 @@ def invert_spectrum(
         initial_values: Optional[List[float]] = None,
         method: str = 'SLSQP',
         options: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
 ) -> OptimizationResult:
     """Invert a single spectrum to derive water properties.
 
@@ -89,8 +90,8 @@ def invert_spectrum(
     low_relax = 0.7
     high_relax = 1.3
 
-    cons = ({'type': 'ineq', 'fun': lambda x: high_relax - (x[4] + x[5] + x[6])},
-            {'type': 'ineq', 'fun': lambda x: (x[4] + x[5] + x[6]) - low_relax})
+    cons = None #({'type': 'ineq', 'fun': lambda x: high_relax - (x[4] + x[5] + x[6])},
+           # {'type': 'ineq', 'fun': lambda x: (x[4] + x[5] + x[6]) - low_relax})
     # Perform optimization
     result = optimize.minimize(
         objective,
@@ -103,7 +104,6 @@ def invert_spectrum(
 
     # Get optimized parameters
     optimized_params = result.x
-
     # Run forward model with optimized parameters to get modeled spectra
     forward_params = inversion_parameters.get_forward_model_params(optimized_params)
     forward_result = forward_model(**forward_params)
@@ -138,6 +138,7 @@ def multi_start_inversion(
         initial_values: Optional[List[float]] = None,
         method: str = 'SLSQP',
         options: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
 ) -> OptimizationResult:
     """Perform multi-start inversion to avoid local minima.
 

@@ -11,8 +11,10 @@ from collections import namedtuple
 from typing import Callable, Dict, List, Optional, Tuple, Any, Union
 from scipy.optimize import minimize as scipy_minimize
 
+# Import at module level to avoid circular imports
 from sambuca_core.inversion import OptimizationResult
-from .objective_functions import spectral_rmse_with_nedr
+from sambuca_core.forward_model import forward_model
+from .objective_functions import spectral_rmse_with_nedr, distance_f
 
 # Define a named tuple for the minimize results
 MinimizeResult = namedtuple('MinimizeResult', ['x', 'nit', 'success', 'fun', 'message'])
@@ -115,7 +117,6 @@ def parallel_minimize(
         return min_results
 
     # Find the best result
-    best_idx = np.argmin([r.fun for r in min_results if r.success])
     valid_results = [r for r in min_results if r.success]
 
     if not valid_results:
@@ -123,6 +124,8 @@ def parallel_minimize(
         best_idx = np.argmin([r.fun for r in min_results])
         return min_results[best_idx]
 
+    # Find the best among valid results
+    best_idx = np.argmin([r.fun for r in valid_results])
     return valid_results[best_idx]
 
 
@@ -133,7 +136,7 @@ def parallel_inversion(
         n_processes: int = None,
         method: str = 'L-BFGS-B',
         options: Optional[Dict] = None,
-        objective_function: Callable = spectral_rmse_with_nedr) -> OptimizationResult:
+        objective_function: Callable = distance_f) -> OptimizationResult:
     """Perform multi-start inversion in parallel.
 
     Args:
@@ -148,8 +151,6 @@ def parallel_inversion(
     Returns:
         Dictionary with the best inversion results.
     """
-    from .optimization import OptimizationResult
-
     # Get parameter bounds
     bounds = inversion_parameters.get_parameter_bounds()
     param_names = inversion_parameters.get_inversion_parameter_names()
@@ -192,9 +193,6 @@ def parallel_inversion(
 
     # Run forward model with optimized parameters to get modeled spectra
     forward_params = inversion_parameters.get_forward_model_params(result.x)
-
-    # Import here to avoid circular imports
-    from ..forward_model import forward_model
     forward_result = forward_model(**forward_params)
 
     # Create parameter dictionary with names
