@@ -56,13 +56,13 @@ def main():
     }
 
     # Define which bands to use
-    bands_used = ["B2", "B3", "B4", "B5"]
+    bands_used = ["B1", "B2", "B3", "B4", "B5"]
     wavelengths_used = [sentinel2_wavelengths[w] for w in bands_used]
 
     # Load the image
     with rasterio.open(input_file) as src:
         # Read all bands
-        image_int16 = src.read()[1:5, :, :]
+        image_int16 = src.read()[:, :, :]
         metadata = src.meta
 
         # Use appropriate scaling factor
@@ -95,16 +95,17 @@ def main():
     # Create inversion parameters
     params = InversionParameters(
         # Parameters to invert for (with bounds)
-        depth=(0.1, 10.0),
-        chl=(1, 2.2),
-        cdom=(0.0001, .0021),
-        nap=(0, 1),
-    #    substrate_fraction=(0, 1)
+      #  depth=(0.1, 10.0),
+      #  chl=(1, 5.2),
+      #  cdom=(0.0001, .0221),
+      #  nap=(0, 5),
+      #  substrate_fraction=(0, 1)
     )
 
     # Update parameters from SIOP manager
     params.update_from_siop_manager(siop_manager, "Sentinel-2")
-
+    params.configure_for_shallow_water()
+ #   params.enable_siop_optimization(conservative=False)
     # Print inversion settings
     print("\n" + "=" * 50)
     print("INVERSION SETTINGS:")
@@ -114,19 +115,20 @@ def main():
     print(f"Depth range: {params.depth}")
     print(f"Chlorophyll range: {params.chl}")
     print(f"CDOM range: {params.cdom}")
+    print(f"NAP range: {params.nap}")
     print("=" * 50)
 
     # Time the execution
     start_time = time.time()
 
     # For demonstration, let's use a small subset of the image
-    subset_size = 500
+    subset_size = 100
     h, w = rrs_image.shape[:2]
     start_h, start_w = h // 2 - subset_size // 2, w // 2 - subset_size // 2
     rrs_subset = rrs_image[start_h:start_h + subset_size, start_w:start_w + subset_size, :]
     mask_subset = data_mask[start_h:start_h + subset_size, start_w:start_w + subset_size]
 
-    use_subset = False
+    use_subset = True
     if use_subset:
         rrs_to_use = rrs_subset
         mask_to_use = mask_subset

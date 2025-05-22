@@ -12,7 +12,7 @@ from numpy.typing import NDArray
 from scipy import optimize
 
 from ..forward_model import forward_model, ForwardModelResults
-from .objective_functions import spectral_rmse_with_nedr
+from .objective_functions import spectral_rmse_with_nedr, distance_f
 from .parameters import InversionParameters
 
 
@@ -42,7 +42,7 @@ class OptimizationResult:
 def invert_spectrum(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse_with_nedr,
+        objective_function: Callable = distance_f,
         initial_values: Optional[List[float]] = None,
         method: str = 'SLSQP',
         options: Optional[Dict[str, Any]] = None,
@@ -92,6 +92,7 @@ def invert_spectrum(
 
     cons = None #({'type': 'ineq', 'fun': lambda x: high_relax - (x[4] + x[5] + x[6])},
            # {'type': 'ineq', 'fun': lambda x: (x[4] + x[5] + x[6]) - low_relax})
+    objective.observed_rrs = observed_rrs
     # Perform optimization
     result = optimize.minimize(
         objective,
@@ -133,7 +134,7 @@ def invert_spectrum(
 def multi_start_inversion(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse_with_nedr,
+        objective_function: Callable = distance_f,
         n_starts: int = 5,
         initial_values: Optional[List[float]] = None,
         method: str = 'SLSQP',
@@ -209,7 +210,7 @@ def multi_start_inversion(
 def grid_search(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse_with_nedr,
+        objective_function: Callable = distance_f,
         grid_size: Union[int, List[int]] = 5,
 ) -> OptimizationResult:
     """Perform a grid search to find the best parameter set.
@@ -291,7 +292,7 @@ def grid_search(
 def optimize_from_grid(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse_with_nedr,
+        objective_function: Callable = distance_f,
         grid_size: Union[int, List[int]] = 5,
         method: str = 'SLSQP',
         options: Optional[Dict[str, Any]] = None,

@@ -228,7 +228,6 @@ def multi_start_with_objective(
         random_start = []
         for lower, upper in bounds:
             random_start.append(lower + np.random.random() * (upper - lower))
-
         # Run optimization
         result = optimize.minimize(
             objective,

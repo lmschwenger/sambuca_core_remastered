@@ -53,19 +53,22 @@ class TestSpectrumInversion(unittest.TestCase):
         # Inversion parameters
         self.inversion_params = InversionParameters(
             # Parameters to invert for (with bounds)
-         #   chl=(0.1, 3.0),  # Chlorophyll concentration
-            depth=(0, 10),  # Water depth
-            chl=(0.5, 3.30),
+            #   chl=(0.1, 3.0),  # Chlorophyll concentration
+            depth=(3, 20),  # Water depth
+            chl=(0.5, 4.30),
             # Optional: include CDOM and NAP if needed
-            cdom=(0.001, 0.42),      # CDOM concentration
-            nap=(0.1, 9.0),        # NAP concentration
-            fixed_substrate_fraction=.95,
+            cdom=(0.0001, .3),  # CDOM concentration
+            nap=(0.0001, 3),  # NAP concentration
+           # fixed_substrate_fraction=.85,
             # Fixed parameters - will be updated from the SIOP manager
             wavelengths=self.wavelengths_used
         )
 
         # Update parameters from SIOP manager
         self.inversion_params.update_from_siop_manager(self.siop_manager, "Sentinel-2")
+        self.inversion_params.enable_siop_optimization()
+        self.inversion_params.configure_for_shallow_water()
+
 
     def load_image_and_extract_pixel(self):
         """Load the image and extract the test pixel's spectrum."""

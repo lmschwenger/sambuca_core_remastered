@@ -179,6 +179,7 @@ def parallel_inversion(
             return objective_function(params, obs_rrs, inversion_parameters, nedr=inversion_parameters.nedr)
         else:
             return objective_function(params, obs_rrs, inversion_parameters)
+    objective_for_worker(observed_rrs, observed_rrs)  # Pre-bind observed_rrs
 
     # Run the parallel optimization
     result = parallel_minimize(
