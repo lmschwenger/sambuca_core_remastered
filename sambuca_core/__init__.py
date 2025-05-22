@@ -37,6 +37,9 @@ from .utility import (
     strictly_increasing,
 )
 
+from .enhanced_forward_model import (enhanced_objective_function, enhanced_initial_values, enhanced_forward_model)
+
+
 __author__ = "Lasse M. Schwenger"
 __email__ = "lasse.m.schwenger@gmail.com"
 __version__ = "0.1.0"

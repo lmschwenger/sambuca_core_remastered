@@ -13,6 +13,7 @@ import rasterio
 
 import sambuca_core as sbc
 from sambuca_core.inversion import InversionParameters, process_image
+from sambuca_core.utility import enhanced_sentinel2_preprocessing
 from sambuca_core.utility.plotting import plot_inversion_results
 
 # Try to import parallel processing modules
@@ -29,10 +30,11 @@ except ImportError:
 def main():
     """Run the parallel inversion example."""
     # Define paths - adjust these as needed
-    input_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'images', 'Browser_images_clipped.tif')
-    mask_input = os.path.join(os.path.dirname(input_file), 'Browser_images__ndwi_clipped.tif')
+    input_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09_clipped2.tif')
+    mask_input = os.path.join(os.path.dirname(input_file), 'S2_L2A_20180508_B01-B05_ndwi_clipped2.tif')
+    scl_input = os.path.join(os.path.dirname(input_file), 'Browser_images_scl_clipped.tif')
     siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
-    sensor_filter_input = os.path.join(os.path.dirname(input_file), '..', '..', 'sensor_filters', 'sensor_filters.csv')
+    sensor_filter_input = os.path.join(os.path.dirname(input_file), '..', 'sensor_filters', 'sensor_filters.csv')
     output_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'output')
 
     # Create output directory if it doesn't exist
@@ -40,53 +42,35 @@ def main():
 
     # Define Sentinel-2 band wavelengths
     sentinel2_wavelengths = {
-        "B1": 442.7,  # Coastal aerosol
-        "B2": 492.4,  # Blue
-        "B3": 559.8,  # Green
-        "B4": 664.6,  # Red
-        "B5": 704.1,  # Vegetation red edge
-        "B6": 740.5,  # Vegetation red edge
-        "B7": 782.8,  # Vegetation red edge
-        "B8": 832.8,  # NIR
+        "B01": 442.7,  # Coastal aerosol
+        "B02": 492.4,  # Blue
+        "B03": 559.8,  # Green
+        "B04": 664.6,  # Red
+        "B05": 704.1,  # Vegetation red edge
+        "B06": 740.5,  # Vegetation red edge
+        "B07": 782.8,  # Vegetation red edge
+        "B08": 832.8,  # NIR
         "B8A": 864.7,  # Narrow NIR
-        "B9": 945.1,  # Water vapour
+        "B09": 945.1,  # Water vapour
         "B10": 1373.5,  # SWIR - Cirrus
         "B11": 1613.7,  # SWIR
         "B12": 2202.4  # SWIR
     }
 
     # Define which bands to use
-    bands_used = ["B1", "B2", "B3", "B4", "B5"]
-    wavelengths_used = [sentinel2_wavelengths[w] for w in bands_used]
+    bands_used = ["B02", "B03", "B04", "B05", "B06", "B07", "B08"]
+    processed_data = enhanced_sentinel2_preprocessing(
+        l2a_image_path=input_file,
+        scl_path=scl_input,
+        ndwi_mask_path=mask_input,
+        bands_to_use=bands_used,
+        solar_zenith=30.0  # Adjust based on your scene
+    )
 
-    # Load the image
-    with rasterio.open(input_file) as src:
-        # Read all bands
-        image_int16 = src.read()[:, :, :]
-        metadata = src.meta
-
-        # Use appropriate scaling factor
-        scaling_factor = 10000.0 if metadata['dtype'] == 'uint16' else 1.0
-
-        # Convert to surface reflectance (0-1)
-        surface_reflectance = image_int16.astype(np.float32) / scaling_factor
-
-        # Handle no-data values
-        no_data_mask = (image_int16 <= 0)
-        surface_reflectance[no_data_mask] = np.nan
-
-        # Convert to remote sensing reflectance
-        rrs = surface_reflectance / np.pi
-
-        # Transpose to (height, width, bands) for easier pixel access
-        rrs_image = np.transpose(rrs, (1, 2, 0))
-
-    if mask_input is not None and mask_input != '':
-        with rasterio.open(mask_input) as src:
-            mask_image = src.read()
-            data_mask = (mask_image[2, ...] > 0.75)
-    else:
-        data_mask = np.ones_like(rrs_image[..., 0], dtype=bool)
+    # Extract data for SAMBUCA
+    rrs_image = processed_data['rrs_image']
+    data_mask = processed_data['water_mask']
+    wavelengths_used = processed_data['wavelengths']
 
     # Initialize SIOP manager
     siop_manager = sbc.SIOPManager(siop_dir)
@@ -95,17 +79,18 @@ def main():
     # Create inversion parameters
     params = InversionParameters(
         # Parameters to invert for (with bounds)
-      #  depth=(0.1, 10.0),
-      #  chl=(1, 5.2),
-      #  cdom=(0.0001, .0221),
-      #  nap=(0, 5),
-      #  substrate_fraction=(0, 1)
+        depth=(0.1, 25.0),
+        chl=(0, 5.2),
+        cdom=(0.0001, .0221),
+        nap=(0, 5),
+        substrate_fraction=(0, 1),
+        substrate2=np.array([0.02, 0.03, 0.15, 0.25, 0.30, 0.25]),
     )
 
     # Update parameters from SIOP manager
     params.update_from_siop_manager(siop_manager, "Sentinel-2")
-    params.configure_for_shallow_water()
- #   params.enable_siop_optimization(conservative=False)
+  #  params.configure_for_shallow_water()
+    params.enable_siop_optimization(conservative=False)
     # Print inversion settings
     print("\n" + "=" * 50)
     print("INVERSION SETTINGS:")
@@ -122,7 +107,7 @@ def main():
     start_time = time.time()
 
     # For demonstration, let's use a small subset of the image
-    subset_size = 100
+    subset_size = 50
     h, w = rrs_image.shape[:2]
     start_h, start_w = h // 2 - subset_size // 2, w // 2 - subset_size // 2
     rrs_subset = rrs_image[start_h:start_h + subset_size, start_w:start_w + subset_size, :]
