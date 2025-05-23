@@ -267,3 +267,173 @@ class InversionParameters:
             self.substrate2 = siops['substrate2']
 
         return self
+
+    def get_adaptive_initial_values(self, observed_rrs: Optional[NDArray] = None) -> List[float]:
+        """Get adaptive initial values based on spectral characteristics.
+
+        Args:
+            observed_rrs: Observed reflectance spectrum for adaptive initialization
+
+        Returns:
+            List of initial parameter values.
+        """
+        initial_values = []
+
+        # Adaptive initialization based on spectral characteristics
+        if observed_rrs is not None and len(observed_rrs) >= 3:
+            # Estimate chlorophyll from blue-green ratio (approximate)
+            if len(observed_rrs) >= 3:
+                blue_green_ratio = observed_rrs[0] / observed_rrs[2] if observed_rrs[2] > 0 else 1.0
+                estimated_chl = max(0.1, min(5.0, 2.0 / blue_green_ratio))
+            else:
+                estimated_chl = 1.0
+
+            # Estimate depth from overall magnitude
+            magnitude = np.mean(observed_rrs)
+            if magnitude < 0.005:  # Very low reflectance suggests deep water
+                estimated_depth = 8.0
+            elif magnitude > 0.02:  # High reflectance suggests shallow water
+                estimated_depth = 2.0
+            else:
+                estimated_depth = 5.0
+        else:
+            estimated_chl = 1.0
+            estimated_depth = 5.0
+
+        # Set initial values for parameters being inverted
+        if self.chl is not None:
+            # Constrain to bounds
+            chl_init = max(self.chl[0], min(self.chl[1], estimated_chl))
+            initial_values.append(chl_init)
+
+        if self.cdom is not None:
+            # CDOM often correlates with chlorophyll in coastal waters
+            cdom_init = max(self.cdom[0], min(self.cdom[1], estimated_chl * 0.3))
+            initial_values.append(cdom_init)
+
+        if self.nap is not None:
+            # NAP estimation - start conservatively
+            nap_init = (self.nap[0] + self.nap[1]) / 2
+            initial_values.append(nap_init)
+
+        if self.depth is not None:
+            depth_init = max(self.depth[0], min(self.depth[1], estimated_depth))
+            initial_values.append(depth_init)
+
+        if self.substrate_fraction is not None:
+            # Start with pure substrate 1
+            initial_values.append(1.0)
+
+        return initial_values
+
+
+# Add to parameters.py for adaptive bounds based on water conditions
+
+def create_adaptive_inversion_parameters(
+        wavelengths,
+        siop_manager,
+        sensor_name,
+        water_type="coastal",  # "coastal", "oceanic", or "inland"
+        max_depth=None,
+        image_stats=None  # Optional: statistics from the image for adaptive bounds
+):
+    """Create InversionParameters with adaptive bounds based on water type and image characteristics.
+
+    Args:
+        wavelengths: Sensor wavelengths
+        siop_manager: SIOPManager instance
+        sensor_name: Registered sensor name
+        water_type: Type of water body ("coastal", "oceanic", "inland")
+        max_depth: Maximum expected depth (if known)
+        image_stats: Optional dictionary with image statistics for adaptive bounds
+
+    Returns:
+        InversionParameters with appropriate bounds for the water type
+    """
+
+    # Base parameter bounds by water type
+    bounds_by_type = {
+        "oceanic": {
+            "chl": (0.01, 3.0),
+            "cdom": (0.001, 0.2),
+            "nap": (0.001, 0.5),
+            "depth": (5.0, 50.0)
+        },
+        "coastal": {
+            "chl": (0.1, 20.0),
+            "cdom": (0.01, 1.5),
+            "nap": (0.01, 5.0),
+            "depth": (0.5, 30.0)
+        },
+        "inland": {
+            "chl": (0.5, 100.0),
+            "cdom": (0.05, 5.0),
+            "nap": (0.1, 20.0),
+            "depth": (0.5, 25.0)
+        }
+    }
+
+    # Get base bounds for water type
+    base_bounds = bounds_by_type.get(water_type, bounds_by_type["coastal"])
+
+    # Adjust bounds based on image statistics if provided
+    if image_stats:
+        # Adjust depth bounds based on overall image brightness
+        mean_reflectance = image_stats.get('mean_reflectance', 0.01)
+        if mean_reflectance < 0.005:  # Very dark image suggests deeper water
+            base_bounds["depth"] = (base_bounds["depth"][0], min(base_bounds["depth"][1] * 2, 100.0))
+        elif mean_reflectance > 0.02:  # Bright image suggests shallower water
+            base_bounds["depth"] = (0.1, min(base_bounds["depth"][1], 15.0))
+
+    # Apply maximum depth constraint if provided
+    if max_depth:
+        base_bounds["depth"] = (base_bounds["depth"][0], min(base_bounds["depth"][1], max_depth))
+
+    # Create InversionParameters
+    params = InversionParameters(
+        chl=base_bounds["chl"],
+        cdom=base_bounds["cdom"],
+        nap=base_bounds["nap"],
+        depth=base_bounds["depth"],
+        substrate_fraction=(0.0, 1.0),  # Always allow full range for substrate mixing
+    )
+
+    # Update with SIOPs
+    params.update_from_siop_manager(siop_manager, sensor_name)
+
+    return params
+
+
+def calculate_image_statistics(image, mask=None):
+    """Calculate statistics from the image to help with adaptive bounds.
+
+    Args:
+        image: Hyperspectral image (height, width, bands)
+        mask: Optional mask of valid pixels
+
+    Returns:
+        Dictionary with image statistics
+    """
+    if mask is not None:
+        valid_pixels = image[mask]
+    else:
+        valid_pixels = image[~np.isnan(image).any(axis=2)]
+
+    if len(valid_pixels) == 0:
+        return {'mean_reflectance': 0.01}
+
+    # Calculate mean reflectance across all bands
+    mean_reflectance = np.mean(valid_pixels)
+
+    # Calculate band-specific statistics
+    band_means = np.mean(valid_pixels, axis=0)
+
+    # Calculate some water-type indicators
+    blue_green_ratio = band_means[0] / band_means[1] if len(band_means) > 1 and band_means[1] > 0 else 1.0
+
+    return {
+        'mean_reflectance': mean_reflectance,
+        'band_means': band_means,
+        'blue_green_ratio': blue_green_ratio,
+        'overall_brightness': np.percentile(valid_pixels.flatten(), 95)  # 95th percentile
+    }

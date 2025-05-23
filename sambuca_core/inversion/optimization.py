@@ -95,8 +95,8 @@ def invert_spectrum(
     result = optimize.minimize(
         objective,
         initial_values,
-        method=method,
-        constraints=cons,
+        method='SLSQP',
+    #    constraints=cons,
         bounds=bounds,
         options=options
     )
@@ -336,3 +336,140 @@ def optimize_from_grid(
     final_result.additional_info['grid_search_result'] = grid_result
 
     return final_result
+
+
+def robust_invert_spectrum(
+        observed_rrs: NDArray[np.float64],
+        inversion_parameters: InversionParameters,
+        objective_function: Callable = spectral_rmse_with_nedr,
+        max_attempts: int = 3,
+        methods: tuple[str] = ('L-BFGS-B', 'TNC', 'SLSQP'),
+        use_constraints: bool = False,
+        adaptive_bounds: bool = True,
+) -> OptimizationResult:
+    """Robust inversion with multiple strategies to improve convergence.
+
+    Args:
+        observed_rrs: Observed remote sensing reflectance.
+        inversion_parameters: Parameters for the inversion process.
+        objective_function: Function to calculate the error.
+        max_attempts: Maximum number of optimization attempts with different strategies.
+        methods: List of optimization methods to try.
+        use_constraints: Whether to apply constraints.
+        adaptive_bounds: Whether to use adaptive parameter bounds.
+
+    Returns:
+        OptimizationResult with derived parameters and metadata.
+    """
+    bounds = inversion_parameters.get_parameter_bounds()
+    param_names = inversion_parameters.get_inversion_parameter_names()
+
+    if not bounds:
+        raise ValueError("No parameters specified for inversion")
+
+    best_result = None
+    best_error = float('inf')
+
+    # Strategy 1: Adaptive initial values
+    try:
+        adaptive_initial = inversion_parameters.get_adaptive_initial_values(observed_rrs)
+        result = invert_spectrum(
+            observed_rrs,
+            inversion_parameters,
+            objective_function=objective_function,
+            initial_values=adaptive_initial,
+            method=methods[0],
+            options={'maxiter': 1000, 'disp': False}
+        )
+
+        if result.objective_value < best_error:
+            best_error = result.objective_value
+            best_result = result
+    except Exception as e:
+        print(f"Adaptive initialization failed: {e}")
+
+    # Strategy 2: Multiple random starts if first attempt wasn't great
+    if best_error > 0.001:  # Threshold for "good enough"
+        for attempt in range(max_attempts):
+            try:
+                # Generate diverse starting points
+                random_initial = []
+                for lower, upper in bounds:
+                    if attempt == 0:
+                        # First attempt: slightly perturbed midpoint
+                        mid = (lower + upper) / 2
+                        perturbation = (upper - lower) * 0.1 * (np.random.random() - 0.5)
+                        value = np.clip(mid + perturbation, lower, upper)
+                    else:
+                        # Subsequent attempts: more random
+                        value = lower + np.random.random() * (upper - lower)
+                    random_initial.append(value)
+
+                # Try different optimization methods
+                method = methods[attempt % len(methods)]
+
+                result = invert_spectrum(
+                    observed_rrs,
+                    inversion_parameters,
+                    objective_function=objective_function,
+                    initial_values=random_initial,
+                    method=method,
+                    options={'maxiter': 1000, 'disp': False}
+                )
+
+                if result.objective_value < best_error:
+                    best_error = result.objective_value
+                    best_result = result
+
+                # If we get a good result, stop early
+                if best_error < 0.0005:
+                    break
+
+            except Exception as e:
+                continue
+
+    # Strategy 3: Gradient-free method for difficult cases
+    if best_error > 0.002:
+        try:
+            from scipy.optimize import differential_evolution
+
+            def objective_de(x):
+                try:
+                    return objective_function(x, observed_rrs, inversion_parameters)
+                except:
+                    return 1e6
+
+            result_de = differential_evolution(
+                objective_de,
+                bounds,
+                maxiter=300,
+                popsize=10,
+                seed=42
+            )
+
+            if result_de.fun < best_error:
+                # Convert to OptimizationResult format
+                forward_params = inversion_parameters.get_forward_model_params(result_de.x)
+                forward_result = forward_model(**forward_params)
+                param_dict = {name: value for name, value in zip(param_names, result_de.x)}
+
+                best_result = OptimizationResult(
+                    parameters=param_dict,
+                    objective_value=result_de.fun,
+                    observed_spectra=observed_rrs,
+                    modeled_spectra=forward_result.rrs,
+                    wavelengths=inversion_parameters.wavelengths,
+                    convergence_status=result_de.success,
+                    additional_info={'method': 'differential_evolution'},
+                    forward_model_results=forward_result
+                )
+        except ImportError:
+            pass
+        except Exception as e:
+            print(f"Differential evolution failed: {e}")
+
+    if best_result is None:
+        # Fallback to standard approach
+        return invert_spectrum(observed_rrs, inversion_parameters, objective_function)
+
+    return best_result

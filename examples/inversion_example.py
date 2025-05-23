@@ -45,7 +45,7 @@ with rasterio.open(input_) as src:
     # Set them to NaN for proper handling later
     no_data_mask = (image_int16 <= 0)
     surface_reflectance[no_data_mask] = np.nan
-    rrs = surface_reflectance / np.pi
+    rrs = surface_reflectance #/ np.pi
     rrs[rrs < 0] = 0
     rrs_image = np.transpose(rrs, (1, 2, 0))[..., :4]
  #   rrs_image = (2 * rrs_image) / ((3 * rrs_image) + 1)
@@ -84,11 +84,15 @@ siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
 
 # Create inversion parameters for a specific sensor
 params = InversionParameters(
-    # Parameters to invert for
-    depth=(0.1, 10.0),
-    chl=(0.01, 2.0),
-    #  cdom=(0.0005, 0.01),
-    #  nap=(0.01, 0.5)
+    depth=(0, 25),  # Make sure this is not fixed, and covers the expected range
+   # chl=(0.4, .70),
+   # cdom=(0.001, .1),
+   # nap=(.1, 2.0),
+    fixed_chl = 0.5,
+    fixed_nap = 0.001,
+    fixed_cdom = 0.0025,
+    fixed_substrate_fraction=1,
+    wavelengths=wavelengths_used
 )
 
 # Load SIOPs for this sensor
@@ -143,7 +147,7 @@ results_with_nedr = process_image(
     lut=None,
     n_processes=4,
     progress_bar=True,
-    n_starts=10,
+    n_starts=25,
     objective_function=spectral_rmse_with_nedr  # Use NEDR-weighted objective function
 )
 
