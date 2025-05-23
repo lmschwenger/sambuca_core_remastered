@@ -14,10 +14,10 @@ from sambuca_core.utility.plotting import plot_inversion_results
 from sambuca_core.inversion.objective_functions import spectral_rmse_with_nedr
 
 # Define paths
-input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09_clipped2.tif')
+input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
 siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
 output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_nedr_{os.path.basename(input_)}")
-mask_input = os.path.join(os.path.dirname(input_), 'S2_L2A_20180508_B01-B05_ndwi_clipped2.tif')
+mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI.tiff')
 
 # Define the path to your NEDR CSV file
 nedr_csv = os.path.join(os.path.dirname(__file__), '..', 'data', 'nedr', 's2testc.csv')

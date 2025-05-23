@@ -17,10 +17,10 @@ class TestSpectrumInversion(unittest.TestCase):
     def setUp(self):
         """Set up the test data and parameters."""
         # Path to the test image - modify this to point to your image
-        self.image_path = os.path.join("..", "data", "input", "anholt_20170823_b02b09.tif")
+        self.image_path = os.path.join("../..", "data", "input", "anholt_20170823_b02b09.tif")
 
         # Path to SIOP directory - modify as needed
-        self.siop_dir = os.path.join("..", "data", "siops")
+        self.siop_dir = os.path.join("../..", "data", "siops")
 
         # Test pixel coordinates [y, x] - modify these to select your pixel of interest
         self.test_pixel = [600, 600]
@@ -135,7 +135,7 @@ class TestSpectrumInversion(unittest.TestCase):
         plt.tight_layout()
 
         # Save the figure
-        output_dir = Path('output')
+        output_dir = Path('../../tests/output')
         output_dir.mkdir(exist_ok=True)
         plt.savefig(output_dir / 'test_pixel_location.png', dpi=300)
 
@@ -190,7 +190,7 @@ class TestSpectrumInversion(unittest.TestCase):
         plt.tight_layout()
 
         # Save the figure
-        output_dir = Path('output')
+        output_dir = Path('../../tests/output')
         output_dir.mkdir(exist_ok=True)
         plt.show()
         plt.savefig(output_dir / 'inversion_results.png', dpi=300)
@@ -200,7 +200,7 @@ class TestSpectrumInversion(unittest.TestCase):
     def visualize_siops(self):
         """Visualize the SIOPs used in the inversion."""
         # Create output directory if it doesn't exist
-        output_dir = Path('output')
+        output_dir = Path('../../tests/output')
         output_dir.mkdir(exist_ok=True)
 
         # Plot absorption SIOPs
@@ -276,7 +276,7 @@ class TestSpectrumInversion(unittest.TestCase):
             return
         
         # Create output directory
-        output_dir = Path('output')
+        output_dir = Path('../../tests/output')
         output_dir.mkdir(exist_ok=True)
         
         # Define parameter pairs to visualize
