@@ -6,7 +6,7 @@
 
 SAMBUCA Core is a modernized Python implementation of the physics-based radiative transfer model for deriving water column properties and bathymetry from remote sensing data. This version builds upon the original SAMBUCA model developed by CSIRO's Oceans and Atmosphere team, providing enhanced performance, improved usability, and modern Python packaging.
 
-> **🏛️ Original Work**: This implementation is heavily inspired by and builds upon the original [SAMBUCA model](https://github.com/csiro-aquatic-remote-sensing/sambuca_core) developed by CSIRO. We gratefully acknowledge the foundational work of the original development team including Daniel Steinberg, Lachlan Lymburner, and other contributors.
+> **🏛️ Original Work**: This implementation is heavily inspired by and builds upon the original [SAMBUCA model](https://github.com/csiro-aquatic-remote-sensing/sambuca_core) developed by CSIRO. We gratefully acknowledge the foundational work of the original development team.
 
 ## ✨ Key Features
 
