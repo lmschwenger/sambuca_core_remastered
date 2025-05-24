@@ -158,20 +158,12 @@ sambuca_core/
 ## 🎯 Examples & Tutorials
 
 ### Basic Examples
-- **[Forward Model Demo](examples/basic/01_forward_model_demo.py)** - Run the radiative transfer model
-- **[SIOP Management](examples/basic/02_siop_management.py)** - Load and interpolate spectral libraries
-- **[Single Pixel Inversion](examples/basic/03_single_pixel_inversion.py)** - Estimate water properties from a spectrum
-
-### Intermediate Examples  
-- **[Image Processing](examples/intermediate/image_processing.py)** - Process satellite images
-- **[LUT-Based Inversion](examples/intermediate/lut_based_inversion.py)** - Fast lookup table approach
-- **[Custom SIOPs](examples/intermediate/custom_siops.py)** - Use your own spectral libraries
+- **[Forward Model Demo](examples/basic/01_basic_forward_model_example.py)** - Run the radiative transfer model
+- **[SIOP Management](examples/basic/02_siop_and_sensor_example.py)** - Load and interpolate spectral libraries
+- **[Single Pixel Inversion](examples/basic/03_simple_inversion_example.py)** - Estimate water properties from a spectrum
 
 ### Advanced Examples
-- **[Full Image Workflow](examples/advanced/full_image_processing.py)** - Complete Sentinel-2 processing pipeline
-- **[Uncertainty Analysis](examples/advanced/uncertainty_analysis.py)** - Error quantification and NEDR weighting
-- **[Sensitivity Analysis](examples/advanced/sensitivity_analysis.py)** - Parameter sensitivity testing
-
+- **[Full Image Workflow](examples/advanced/full_image_inversion.py)** - Complete Sentinel-2 processing pipeline
 ## 🔬 Scientific Background
 
 SAMBUCA implements the semi-analytical radiative transfer model described in:
