@@ -9,7 +9,7 @@ from .parameters import InversionParameters, create_adaptive_inversion_parameter
 from .objective_functions import spectral_rmse, spectral_angle_mapper
 from .optimization import invert_spectrum, OptimizationResult, multi_start_inversion, robust_invert_spectrum
 from .lut import LookUpTable
-from .pixel_processor import process_pixel, process_image
+from .pixel_processor import process_pixel, process_image, batch_process_image
 
 __all__ = [
     'InversionParameters',
@@ -20,5 +20,8 @@ __all__ = [
     'LookUpTable',
     'process_pixel',
     'process_image',
-    'robust_invert_spectrum'
+    'robust_invert_spectrum',
+    'batch_process_image',
+    'create_adaptive_inversion_parameters',
+    'calculate_image_statistics'
 ]

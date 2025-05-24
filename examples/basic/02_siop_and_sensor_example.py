@@ -15,7 +15,7 @@ def example_siop_manager_usage():
     """Example usage of SIOPManager for different sensors."""
 
     # Find the SIOP directory
-    siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
+    siop_dir = os.path.join(os.path.dirname(__file__),"..", "..", "data", "siops")
     print(f"Using SIOP directory: {siop_dir}")
 
     # Initialize the SIOP manager
@@ -101,7 +101,10 @@ def example_siop_manager_usage():
                 subplot_idx += 1
 
         plt.tight_layout()
-        plt.savefig("siops_comparison.png", dpi=300)
+        # Ensure output directory exists
+        output_dir = os.path.join(os.path.dirname(__file__),"..", "..", "data", "output", "examples", "basic")
+        os.makedirs(output_dir, exist_ok=True)
+        plt.savefig(os.path.join(output_dir, "siops_comparison.png"), dpi=300)
         plt.show()
 
 
