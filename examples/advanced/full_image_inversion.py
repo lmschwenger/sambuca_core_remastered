@@ -14,13 +14,13 @@ from sambuca_core.utility.plotting import plot_inversion_results
 from sambuca_core.inversion.objective_functions import spectral_rmse_with_nedr
 
 # Define paths
-input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
-siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
-output_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'output', f"sdb_nedr_{os.path.basename(input_)}")
+input_ = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
+siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..', "data", "siops")
+output_ = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'output', f"sdb_nedr_{os.path.basename(input_)}")
 mask_input = os.path.join(os.path.dirname(input_), 'anholt_20250403_NDWI.tiff')
 
 # Define the path to your NEDR CSV file
-nedr_csv = os.path.join(os.path.dirname(__file__), '..', 'data', 'nedr', 's2testc.csv')
+nedr_csv = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'nedr', 's2testc.csv')
 
 # Load NEDR values from CSV
 nedr_df = pd.read_csv(nedr_csv)
@@ -84,10 +84,7 @@ siop_manager.register_sensor("Sentinel-2", wavelengths=wavelengths_used)
 
 # Create inversion parameters for a specific sensor
 params = InversionParameters(
-    depth=(0, 25),  # Make sure this is not fixed, and covers the expected range
-   # chl=(0.4, .70),
-   # cdom=(0.001, .1),
-   # nap=(.1, 2.0),
+    depth=(0, 25),
     fixed_chl = 0.5,
     fixed_nap = 0.001,
     fixed_cdom = 0.0025,

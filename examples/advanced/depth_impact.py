@@ -6,8 +6,8 @@ import rasterio
 import sambuca_core as sbc
 from sambuca_core.inversion import InversionParameters
 
-input_ = os.path.join(os.path.dirname(__file__), '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
-siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "siops")
+input_ = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'input', 'anholt_20170823_b02b09.tif')
+siop_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..', "data", "siops")
 
 with rasterio.open(input_) as src:
     # Read all bands
