@@ -80,12 +80,9 @@ class TestSpectrumInversion(unittest.TestCase):
             # Convert to surface reflectance (0-1)
             surface_reflectance = image_data.astype(np.float32) / scaling_factor
 
-            # Convert to remote sensing reflectance (Rrs)
-            rrs = surface_reflectance / np.pi
-
             # Extract the pixel spectrum
             y, x = self.test_pixel
-            pixel_rrs = rrs[:, y, x]
+            pixel_rrs = surface_reflectance[:, y, x]
 
             # Check if pixel is valid (not NaN or 0)
             if np.any(np.isnan(pixel_rrs)) or np.all(pixel_rrs <= 0):

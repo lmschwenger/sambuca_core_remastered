@@ -6,7 +6,6 @@ Sambuca is a Semi-Analytical Model for Bathymetry, Un-mixing, and Concentration 
 
 from typing import Tuple, Dict, List
 
-# Import public functionality
 from .exceptions import (
     SambucaException,
     UnsupportedDataFormatError,
