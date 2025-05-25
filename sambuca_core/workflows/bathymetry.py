@@ -19,16 +19,15 @@ class BathymetryWorkflow(BaseWorkflow):
         self.siop_manager.register_sensor(self.sensor.name, self.wavelengths)
 
         # Set up inversion parameters optimized for bathymetry
+        # Start with depth-only inversion as default
         self.inversion_params = InversionParameters(
             # Primary parameter: depth
             depth=(0, 25),
 
-            # Secondary parameters with reasonable bounds
-            chl=(0.5, 3.0),  # Chlorophyll
-            cdom=(0.001, 0.4),  # CDOM
-            nap=(0.1, 8.0),  # NAP
-
-            # Fixed substrate mixing (can be overridden)
+            # Fix other parameters by default (can be overridden)
+            fixed_chl=1.0,
+            fixed_cdom=0.1,
+            fixed_nap=1.0,
             fixed_substrate_fraction=0.95,
 
             # Will be updated from SIOP manager
@@ -40,6 +39,40 @@ class BathymetryWorkflow(BaseWorkflow):
             self.siop_manager,
             self.sensor.name
         )
+
+    def customize_parameters(self, **kwargs):
+        """
+        Customize inversion parameters.
+
+        Args:
+            **kwargs: Parameter bounds to update (e.g., depth=(0, 15), chl=(0.1, 5.0))
+                     or fixed values (e.g., fixed_chl=0.5, fixed_nap=0.001)
+        """
+        for param, value in kwargs.items():
+            if param.startswith('fixed_'):
+                # Handle fixed parameters
+                base_param = param[6:]  # Remove 'fixed_' prefix
+
+                # Remove any existing bounds for this parameter
+                if hasattr(self.inversion_params, base_param):
+                    setattr(self.inversion_params, base_param, None)
+
+                # Set the fixed value
+                setattr(self.inversion_params, param, value)
+                print(f"Fixed {base_param} to {value}")
+
+            elif hasattr(self.inversion_params, param):
+                # Handle parameter bounds
+                # First remove any fixed value for this parameter
+                fixed_param = f"fixed_{param}"
+                if hasattr(self.inversion_params, fixed_param):
+                    setattr(self.inversion_params, fixed_param, None)
+
+                # Set the bounds
+                setattr(self.inversion_params, param, value)
+                print(f"Updated {param} bounds to {value}")
+            else:
+                print(f"Warning: Unknown parameter '{param}'")
 
     def process_image(self,
                       image_path: str,
@@ -73,6 +106,35 @@ class BathymetryWorkflow(BaseWorkflow):
             water_mask = ImagePreprocessor.apply_water_mask(image_data, mask_path)
         else:
             water_mask = None
+
+        # Print inversion settings for debugging
+        print("\n" + "=" * 50)
+        print("INVERSION SETTINGS:")
+        print("=" * 50)
+        print(f"Wavelengths: {self.wavelengths} nm")
+        print(f"Parameters to invert: {self.inversion_params.get_inversion_parameter_names()}")
+
+        # Print bounds for parameters being inverted
+        bounds = self.inversion_params.get_parameter_bounds()
+        param_names = self.inversion_params.get_inversion_parameter_names()
+        for i, param_name in enumerate(param_names):
+            print(f"{param_name} range: {bounds[i]}")
+
+        # Print fixed parameter values
+        fixed_params = []
+        for attr in ['fixed_chl', 'fixed_cdom', 'fixed_nap', 'fixed_substrate_fraction']:
+            if hasattr(self.inversion_params, attr):
+                value = getattr(self.inversion_params, attr)
+                if value is not None:
+                    fixed_params.append(f"{attr}: {value}")
+
+        if fixed_params:
+            print("Fixed parameters:")
+            for param in fixed_params:
+                print(f"  {param}")
+
+        print(f"Number of processes: {n_processes}")
+        print("=" * 50)
 
         # Run inversion
         print(f"Processing {np.sum(water_mask) if water_mask is not None else 'all'} pixels...")
@@ -146,9 +208,18 @@ class BathymetryWorkflow(BaseWorkflow):
             plt.grid(True, alpha=0.3)
 
             # Add results as text
-            result_text = f"Depth: {result.parameters['depth']:.2f} m\n"
-            result_text += f"Chl: {result.parameters['chl']:.2f} mg/m³\n"
-            result_text += f"RMSE: {result.objective_value:.4f}"
+            result_text = f"Inversion Results:\n"
+            for param, value in result.parameters.items():
+                if param == 'depth':
+                    result_text += f"Depth: {value:.2f} m\n"
+                elif param == 'chl':
+                    result_text += f"Chl: {value:.2f} mg/m³\n"
+                elif param == 'cdom':
+                    result_text += f"CDOM: {value:.4f} m⁻¹\n"
+                elif param == 'nap':
+                    result_text += f"NAP: {value:.2f} mg/L\n"
+
+            result_text += f"RMSE: {result.objective_value:.6f}"
 
             plt.text(0.02, 0.98, result_text, transform=plt.gca().transAxes,
                      bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
@@ -166,20 +237,6 @@ class BathymetryWorkflow(BaseWorkflow):
             'wavelengths': self.wavelengths,
             'pixel_coords': pixel_coords
         }
-
-    def customize_parameters(self, **kwargs):
-        """
-        Customize inversion parameters.
-
-        Args:
-            **kwargs: Parameter bounds to update (e.g., depth=(0, 15), chl=(0.1, 5.0))
-        """
-        for param, bounds in kwargs.items():
-            if hasattr(self.inversion_params, param):
-                setattr(self.inversion_params, param, bounds)
-                print(f"Updated {param} bounds to {bounds}")
-            else:
-                print(f"Warning: Unknown parameter '{param}'")
 
     def quick_preview(self, image_path: str, pixel_coords: Optional[Tuple[int, int]] = None):
         """
