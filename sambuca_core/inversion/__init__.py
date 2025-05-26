@@ -5,9 +5,10 @@ for the derivation of water column parameters (chlorophyll, CDOM, NAP, depth,
 substrate composition) from observed remote sensing reflectance.
 """
 
-from .parameters import InversionParameters, create_adaptive_inversion_parameters, calculate_image_statistics
+from .parameters import InversionParameters
 from .objective_functions import spectral_rmse, spectral_angle_mapper
-from .optimization import invert_spectrum, OptimizationResult, multi_start_inversion, robust_invert_spectrum
+from .optimization import invert_spectrum, multi_start_inversion
+from .optimization_result import OptimizationResult
 from .lut import LookUpTable
 from .pixel_processor import process_pixel, process_image, batch_process_image
 
@@ -20,8 +21,5 @@ __all__ = [
     'LookUpTable',
     'process_pixel',
     'process_image',
-    'robust_invert_spectrum',
     'batch_process_image',
-    'create_adaptive_inversion_parameters',
-    'calculate_image_statistics'
 ]
