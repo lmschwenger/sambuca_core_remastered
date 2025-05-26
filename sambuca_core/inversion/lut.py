@@ -296,6 +296,8 @@ class LookUpTable:
 
         return lut
 
+    # Replace the entire invert method in sambuca_core/inversion/lut.py
+
     def invert(
             self,
             observed_rrs: NDArray[np.float64],
@@ -323,6 +325,14 @@ class LookUpTable:
         Raises:
             ValueError: If the look-up table has not been built yet or if
                 an unknown metric is specified.
+                :param nedr:
+                :param observed_rrs:
+                :param n_best:
+                :param use_kdtree:
+                :param metric:
+                :param refine:
+                :param n_starts:
+                :param use_multi_start:
         """
         if not self.table_built:
             raise ValueError("Look-up table not built yet, call build_table() first")
@@ -333,6 +343,15 @@ class LookUpTable:
         if use_kdtree and self.kdtree is not None and metric in ['rmse', 'euclidean']:
             # For RMSE and euclidean, we can use KD-tree directly
             distances, indices = self.kdtree.query(observed_rrs, k=n_best)
+
+            # Handle the case where k=1 returns scalars instead of arrays
+            if n_best == 1:
+                distances = [distances]
+                indices = [indices]
+            else:
+                # Ensure we have lists for consistency
+                distances = list(distances)
+                indices = list(indices)
 
             # Get parameters and spectra for best matches
             best_params = [tuple(self.param_array[i]) for i in indices]
@@ -407,11 +426,6 @@ class LookUpTable:
         lookup_time = time.time() - start_time
 
         # Optional refinement using optimization
-        refine_start = time.time()
-
-        # Use the best LUT match as initial values
-        initial_values = list(best_params[0])
-
         if refine:
             refine_start = time.time()
 

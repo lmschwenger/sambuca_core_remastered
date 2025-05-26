@@ -91,10 +91,31 @@ class TestLookUpTableIntegration(unittest.TestCase):
         lut1 = LookUpTable(self.params)
         lut1.build_table(grid_size=3, progress_bar=False)
 
-        # Save LUT
+        # Save LUT using non-compressed format for simpler testing
         lut_file = os.path.join(self.temp_dir, 'test_lut.pkl')
-        lut1.save(lut_file)
+        lut1.save(lut_file, compressed=False)
         self.assertTrue(os.path.exists(lut_file))
+
+        # Load LUT
+        lut2 = LookUpTable.load(lut_file, build_kdtree=False)
+
+        self.assertTrue(lut2.table_built)
+        np.testing.assert_array_equal(lut1.param_array, lut2.param_array)
+        np.testing.assert_array_equal(lut1.spectra_array, lut2.spectra_array)
+
+    def test_lut_save_and_load_compressed(self):
+        """Test LUT save and load functionality with compressed format."""
+        lut1 = LookUpTable(self.params)
+        lut1.build_table(grid_size=3, progress_bar=False)
+
+        # Save LUT using compressed format (default)
+        lut_file = os.path.join(self.temp_dir, 'test_lut_compressed')
+        lut1.save(lut_file, compressed=True)
+
+        # Check that compressed files exist
+        self.assertTrue(os.path.exists(lut_file + "_arrays.npz"))
+        self.assertTrue(os.path.exists(lut_file + "_param_values.npz"))
+        self.assertTrue(os.path.exists(lut_file + "_attrs"))
 
         # Load LUT
         lut2 = LookUpTable.load(lut_file, build_kdtree=False)
