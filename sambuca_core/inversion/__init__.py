@@ -11,6 +11,7 @@ from .optimization import invert_spectrum, multi_start_inversion
 from .optimization_result import OptimizationResult
 from .lut import LookUpTable
 from .pixel_processor import process_pixel, process_image, batch_process_image
+from .parameter_fetchers import ParameterFetcher
 
 __all__ = [
     'InversionParameters',
@@ -22,4 +23,5 @@ __all__ = [
     'process_pixel',
     'process_image',
     'batch_process_image',
+    'ParameterFetcher'
 ]

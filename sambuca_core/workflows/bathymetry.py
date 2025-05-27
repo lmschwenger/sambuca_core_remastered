@@ -1,5 +1,6 @@
+from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, Tuple, List
+from typing import Optional, Dict, Any, Tuple
 import numpy as np
 from .base import BaseWorkflow
 from ..inversion import InversionParameters, process_image
@@ -9,6 +10,10 @@ from ..results import ImageInversionResult
 
 class BathymetryWorkflow(BaseWorkflow):
     """High-level workflow for satellite-derived bathymetry."""
+
+    def __init__(self, siop_dir: str, sensor: str = 'sentinel2'):
+        super().__init__(siop_dir, sensor)
+        self.inversion_params = None
 
     def _setup_defaults(self):
         """Set up default parameters optimized for bathymetry retrieval."""
@@ -273,3 +278,67 @@ class BathymetryWorkflow(BaseWorkflow):
         plt.axis('off')
         plt.tight_layout()
         plt.show()
+
+    def process_image_with_satellite_params(
+            self,
+            image_path: str,
+            image_lat: float,
+            image_lon: float,
+            image_date: datetime,
+            satellite_params: list = None,
+            fallback_to_defaults: bool = True,
+            **kwargs
+    ):
+        """Process image using satellite-derived parameters.
+
+        Args:
+            image_path: Path to satellite image
+            image_lat: Latitude of image center
+            image_lon: Longitude of image center
+            image_date: Date of image acquisition
+            satellite_params: List of parameters to fetch ['chl', 'cdom', 'nap']
+            fallback_to_defaults: Whether to use defaults if satellite fetch fails
+            **kwargs: Additional arguments for process_image
+
+        Returns:
+            ImageInversionResult object
+        """
+        from ..inversion import ParameterFetcher
+
+        if satellite_params is None:
+            satellite_params = ['chl', 'cdom', 'nap']
+
+        try:
+            # Fetch satellite parameters
+            param_fetcher = ParameterFetcher(fetcher_type='sentinel3')
+
+            self.inversion_params = param_fetcher.update_parameters_from_satellite(
+                inversion_params=self.inversion_params,
+                lat=image_lat,
+                lon=image_lon,
+                date=image_date,
+                parameters_to_fetch=satellite_params
+            )
+
+            print("✅ Successfully applied satellite-derived parameters")
+
+        except Exception as e:
+            if fallback_to_defaults:
+                print(f"⚠️  Satellite parameter fetch failed: {e}")
+                print("Using default parameter values...")
+
+                # Apply defaults
+                defaults = {'chl': 1.0, 'cdom': 0.1, 'nap': 0.5}
+                for param in satellite_params:
+                    if param in defaults:
+                        setattr(self.inversion_params, f'fixed_{param}', defaults[param])
+                        setattr(self.inversion_params, param, None)
+            else:
+                raise
+
+        # Ensure depth is the primary inversion parameter
+        if self.inversion_params.depth is None:
+            self.customize_parameters(depth=(0, 25))
+
+        # Process image
+        return self.process_image(image_path=image_path, **kwargs)
