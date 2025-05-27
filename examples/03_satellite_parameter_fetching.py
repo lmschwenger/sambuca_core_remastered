@@ -3,7 +3,7 @@
 Example: Depth-only inversion using satellite-derived water parameters
 
 This example shows how to:
-1. Fetch chlorophyll, CDOM, and NAP from Sentinel-3 OLCI data
+1. Fetch chlorophyll, CDOM, and NAP from Sentinel-3 OLCI data using openEO
 2. Use these as fixed parameters for depth-only bathymetry inversion
 3. Process an image with satellite-constrained parameters
 """
@@ -36,14 +36,11 @@ def main():
     workflow.wavelengths = [492.4, 559.8, 664.6, 704.1]
     workflow.bands = [2, 3, 4, 5]
 
-    # Step 2: Initialize satellite parameter fetcher
+    # Step 2: Initialize satellite parameter fetcher (now using openEO)
     try:
-        # Note: You need to set environment variables:
-        # export COPERNICUS_USER=your_username
-        # export COPERNICUS_PASSWORD=your_password
-        param_fetcher = ParameterFetcher(fetcher_type='sentinel3')
+        print("\n--- Fetching satellite parameters using openEO ---")
 
-        print("\n--- Fetching satellite parameters ---")
+        param_fetcher = ParameterFetcher(fetcher_type='sentinel3')
 
         # Fetch and apply satellite parameters
         updated_params = param_fetcher.update_parameters_from_satellite(
@@ -139,7 +136,6 @@ def main():
 def check_satellite_availability():
     """Check if satellite data is available for a given location and date."""
 
-    # Example usage of availability checking
     param_fetcher = ParameterFetcher(fetcher_type='sentinel3')
 
     test_locations = [
@@ -150,21 +146,61 @@ def check_satellite_availability():
 
     test_date = datetime(2023, 6, 15)
 
-    print("=== Checking Sentinel-3 OLCI Data Availability ===")
+    print("=== Checking Sentinel-3 OLCI Data Availability (via openEO) ===")
     for lat, lon, name in test_locations:
         try:
-            available = param_fetcher.fetcher.is_available(lat, lon, test_date)
+            available = param_fetcher.is_available(lat, lon, test_date)
             status = "✅ Available" if available else "❌ Not available"
             print(f"{name} ({lat:.1f}°N, {lon:.1f}°E): {status}")
         except Exception as e:
             print(f"{name} ({lat:.1f}°N, {lon:.1f}°E): ⚠️ Error checking: {e}")
 
 
+def test_openeo_connection():
+    """Test openEO connection and authentication."""
+    print("=== Testing OpenEO Connection ===")
+
+    try:
+        from sambuca_core.data_fetchers import Sentinel3OLCIFetcher
+
+        # Test connection
+        fetcher = Sentinel3OLCIFetcher()
+
+        # Try to connect (this will prompt for authentication if needed)
+        connection = fetcher._connect()
+
+        if connection:
+            print("✅ Successfully connected to openEO backend")
+
+            # List available collections
+            collections = fetcher.get_available_collections()
+            print(f"✅ Found {len(collections)} water-related collections")
+
+            # Test data availability for a known location
+            test_date = datetime(2024, 6, 15)
+            available = fetcher.is_available(55.0, 12.0, test_date)
+            print(f"✅ Data availability test: {'Available' if available else 'Not available'}")
+
+        else:
+            print("❌ Failed to establish connection")
+
+    except ImportError:
+        print("❌ OpenEO not installed. Run: pip install openeo")
+    except Exception as e:
+        print(f"❌ Connection failed: {e}")
+        print("Make sure you have valid credentials or use device authentication")
+
+
 if __name__ == "__main__":
-    # You can run either the main processing example or just check availability
+    # You can run different parts of the example
     import sys
 
-    if len(sys.argv) > 1 and sys.argv[1] == "--check-availability":
-        check_satellite_availability()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--check-availability":
+            check_satellite_availability()
+        elif sys.argv[1] == "--test-connection":
+            test_openeo_connection()
+        else:
+            print("Usage: python 03_satellite_parameter_fetching.py [--check-availability|--test-connection]")
     else:
         main()

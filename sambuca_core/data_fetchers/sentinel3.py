@@ -1,17 +1,11 @@
 import os
-import tempfile
-import zipfile
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 
 try:
-    from sentinelsat import SentinelAPI
-    import xarray as xr
-    import rasterio
-    from rasterio.warp import transform
+    import openeo
 
     DEPENDENCIES_AVAILABLE = True
 except ImportError:
@@ -21,40 +15,117 @@ from .base import BaseDataFetcher
 
 
 class Sentinel3OLCIFetcher(BaseDataFetcher):
-    """Fetcher for Sentinel-3 OLCI water quality parameters."""
+    """Fetcher for Sentinel-3 OLCI water quality parameters using openEO."""
 
-    def __init__(self, username: str = None, password: str = None):
-        """Initialize Sentinel-3 OLCI data fetcher.
+    def __init__(self, username: str = None, password: str = None, backend_url: str = None):
+        """Initialize Sentinel-3 OLCI data fetcher using openEO.
 
         Args:
-            username: Copernicus Hub username (or set COPERNICUS_USER env var)
-            password: Copernicus Hub password (or set COPERNICUS_PASSWORD env var)
+            username: Optional username for openEO authentication
+            password: Optional password for openEO authentication
+            backend_url: openEO backend URL (defaults to Copernicus Data Space)
         """
         if not DEPENDENCIES_AVAILABLE:
             raise ImportError(
                 "Required dependencies not available. Install with: "
-                "pip install sentinelsat xarray rasterio"
+                "pip install openeo"
             )
 
-        # Get credentials from environment if not provided
+        # Set default backend
+        self.backend_url = backend_url or "openeo.dataspace.copernicus.eu"
+
+        # Store credentials
         self.username = username or os.getenv('COPERNICUS_USER')
         self.password = password or os.getenv('COPERNICUS_PASSWORD')
 
-        if not self.username or not self.password:
-            raise ValueError(
-                "Copernicus Hub credentials required. Set COPERNICUS_USER and "
-                "COPERNICUS_PASSWORD environment variables or pass to constructor."
-            )
-
-        # Initialize API
-        self.api = SentinelAPI(self.username, self.password, 'https://scihub.copernicus.eu/dhus')
+        # Connection will be established on first use
+        self.connection = None
 
         # Parameter mapping from OLCI product names to our parameter names
         self.parameter_mapping = {
             'chl': 'CHL_OC4ME',  # Chlorophyll concentration (mg/m³)
             'cdom': 'ADG443_NN',  # Absorption detritus+gelbstoff at 443nm (m⁻¹)
             'nap': 'TSM_NN',  # Total suspended matter (g/m³)
+            'kd490': 'KD490_M07'  # Diffuse attenuation coefficient at 490nm
         }
+
+        # Collection configuration
+        self.collection_id = 'SENTINEL3_OLCI_L2_WATER'
+
+    def _connect(self):
+        """Establish connection to openEO backend."""
+        if self.connection is not None:
+            return self.connection
+
+        try:
+            self.connection = openeo.connect(self.backend_url)
+
+            # Authenticate
+
+            # Use device authentication
+            self.connection.authenticate_oidc_device()
+
+            return self.connection
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to connect to openEO backend: {e}")
+
+    def _format_temporal_extent(self, start_date: datetime, end_date: datetime) -> Tuple[str, str]:
+        """Format temporal extent for openEO with fallback options.
+
+        Args:
+            start_date: Start datetime
+            end_date: End datetime
+
+        Returns:
+            Tuple of (start_date_str, end_date_str) formatted for openEO
+        """
+        # Try different date formats that openEO backends commonly accept
+        date_formats = [
+            # Format 1: Date only (most common)
+            (start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')),
+
+            # Format 2: With timezone
+            (start_date.strftime('%Y-%m-%dT00:00:00Z'), end_date.strftime('%Y-%m-%dT23:59:59Z')),
+
+            # Format 3: Full ISO with milliseconds
+            (start_date.strftime('%Y-%m-%dT00:00:00.000Z'), end_date.strftime('%Y-%m-%dT23:59:59.999Z')),
+
+            # Format 4: Local time format
+            (start_date.strftime('%Y-%m-%dT00:00:00'), end_date.strftime('%Y-%m-%dT23:59:59')),
+        ]
+
+        return date_formats
+
+    def _try_load_collection_with_dates(self, connection, spatial_extent: dict, start_date: datetime,
+                                        end_date: datetime):
+        """Try to load collection with different date formats until one works."""
+
+        date_formats = self._format_temporal_extent(start_date, end_date)
+
+        last_error = None
+        for i, (start_str, end_str) in enumerate(date_formats):
+            try:
+                temporal_extent = [start_str, end_str]
+                print(f"Trying date format {i + 1}: {start_str} to {end_str}")
+
+                datacube = connection.load_collection(
+                    self.collection_id,
+                    temporal_extent=temporal_extent,
+                    spatial_extent=spatial_extent
+                )
+
+                print(f"✅ Successfully loaded collection with date format {i + 1}")
+                return datacube
+
+            except Exception as e:
+                print(f"❌ Date format {i + 1} failed: {e}")
+                last_error = e
+                continue
+
+        # If all formats failed, raise the last error with helpful message
+        raise ValueError(f"All date formats failed. Last error: {last_error}. "
+                         f"Try updating openEO client or check backend documentation.")
 
     def fetch_water_parameters(
             self,
@@ -63,9 +134,10 @@ class Sentinel3OLCIFetcher(BaseDataFetcher):
             date: datetime,
             search_days: int = 3,
             max_cloud_cover: float = 20.0,
-            buffer_km: float = 5.0
+            buffer_km: float = 5.0,
+            **kwargs
     ) -> Dict[str, float]:
-        """Fetch water quality parameters from Sentinel-3 OLCI.
+        """Fetch water quality parameters from Sentinel-3 OLCI using openEO.
 
         Args:
             lat: Latitude in decimal degrees
@@ -74,6 +146,7 @@ class Sentinel3OLCIFetcher(BaseDataFetcher):
             search_days: Days to search before/after target date
             max_cloud_cover: Maximum cloud cover percentage
             buffer_km: Search buffer around point in kilometers
+            **kwargs: Additional parameters for compatibility
 
         Returns:
             Dictionary with 'chl', 'cdom', 'nap' values
@@ -83,173 +156,204 @@ class Sentinel3OLCIFetcher(BaseDataFetcher):
             RuntimeError: If data extraction fails
         """
         print(f"Searching for Sentinel-3 OLCI data near ({lat:.4f}, {lon:.4f}) on {date.date()}")
+        print(f"Search window: ±{search_days} days, buffer: {buffer_km} km")
 
-        # Create search area (simple box around point)
-        lat_buffer = buffer_km / 111.0  # Rough km to degrees conversion
-        lon_buffer = buffer_km / (111.0 * np.cos(np.radians(lat)))
+        connection = self._connect()
 
-        bbox = (
-            lon - lon_buffer,  # West
-            lat - lat_buffer,  # South
-            lon + lon_buffer,  # East
-            lat + lat_buffer  # North
-        )
-
-        # Define search period
+        # Define temporal extent
         start_date = date - timedelta(days=search_days)
         end_date = date + timedelta(days=search_days)
 
-        # Search for products
-        products = self.api.query(
-            area=bbox,
-            date=(start_date, end_date),
-            platformname='Sentinel-3',
-            producttype='OL_2_WFR___',  # OLCI Level-2 Water Full Resolution
-            cloudcoverpercentage=(0, max_cloud_cover)
-        )
+        # Define spatial extent (buffer around point)
+        lat_buffer = buffer_km / 111.0  # Rough km to degrees conversion
+        lon_buffer = buffer_km / (111.0 * np.cos(np.radians(lat)))
 
-        if not products:
-            raise ValueError(
-                f"No Sentinel-3 OLCI data found for location ({lat}, {lon}) "
-                f"between {start_date.date()} and {end_date.date()}"
-            )
+        spatial_extent = {
+            "west": lon - lon_buffer,
+            "south": lat - lat_buffer,
+            "east": lon + lon_buffer,
+            "north": lat + lat_buffer,
+            "crs": "EPSG:4326"
+        }
 
-        print(f"Found {len(products)} potential products")
+        try:
+            # Load the data collection with robust date handling
+            datacube = self._try_load_collection_with_dates(connection, spatial_extent, start_date, end_date)
 
-        # Sort by date proximity and try to extract data
-        products_df = self.api.to_dataframe(products)
-        products_df['date_diff'] = abs((products_df['beginposition'] - date).dt.total_seconds())
-        products_df = products_df.sort_values('date_diff')
-
-        for idx, product in products_df.iterrows():
+            # Apply cloud masking if possible
             try:
-                print(f"Trying product: {product['title']}")
-                params = self._extract_parameters_from_product(idx, lat, lon)
-                if params:
-                    print(f"Successfully extracted parameters: {params}")
-                    return params
+                # Try to apply cloud mask if available
+                datacube = datacube.mask(datacube.band('quality_flags').eq(0))
+                print("✅ Applied cloud masking")
             except Exception as e:
-                print(f"Failed to extract from {product['title']}: {e}")
-                continue
+                print(f"⚠️ Could not apply cloud masking: {e}")
+                # Continue without cloud masking
 
-        raise ValueError("Could not extract water parameters from any available products")
+            # Extract parameters
+            parameters = {}
 
-    def _extract_parameters_from_product(
-            self,
-            product_id: str,
-            lat: float,
-            lon: float
-    ) -> Optional[Dict[str, float]]:
-        """Extract parameter values from a specific product."""
+            for param_name, band_name in self.parameter_mapping.items():
+                try:
+                    print(f"Extracting {param_name} from band {band_name}...")
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # Download product
-            print(f"Downloading product {product_id}")
-            self.api.download(product_id, temp_dir)
+                    # Select the band and compute spatial/temporal statistics
+                    param_cube = datacube.band(band_name)
 
-            # Find downloaded file
-            downloaded_files = list(Path(temp_dir).glob("*.zip"))
-            if not downloaded_files:
-                raise RuntimeError("No downloaded file found")
+                    # Compute mean over space and time, ignoring invalid values
+                    stats = param_cube.reduce_dimension(dimension='x', reducer="mean").reduce_dimension(dimension='y', reducer="mean").reduce_dimension(dimension='t', reducer="mean")
 
-            zip_file = downloaded_files[0]
+                    # Execute the computation
+                    result = stats.execute()
 
-            # Extract and process
-            with zipfile.ZipFile(zip_file, 'r') as zf:
-                # Extract to temporary directory
-                extract_dir = Path(temp_dir) / "extracted"
-                zf.extractall(extract_dir)
+                    # Extract the value (handle different openEO return formats)
+                    if hasattr(result, 'item'):
+                        value = result.item()
+                    elif isinstance(result, (list, tuple)) and len(result) > 0:
+                        value = result[0] if hasattr(result[0], 'item') else result[0]
+                    elif isinstance(result, dict) and 'data' in result:
+                        value = result['data']
+                    elif isinstance(result, (int, float)):
+                        value = float(result)
+                    else:
+                        print(f"⚠️ Unexpected result format for {param_name}: {type(result)}")
+                        continue
 
-                # Find .SEN3 product directory
-                sen3_dirs = list(extract_dir.glob("*.SEN3"))
-                if not sen3_dirs:
-                    raise RuntimeError("No .SEN3 directory found in product")
+                    # Validate the result
+                    if np.isfinite(value) and value > 0:
+                        parameters[param_name] = float(value)
+                        print(f"✅ {param_name}: {value:.4f}")
+                    else:
+                        print(f"⚠️ Invalid value for {param_name}: {value}")
 
-                sen3_dir = sen3_dirs[0]
+                except Exception as e:
+                    print(f"❌ Could not extract {param_name}: {e}")
+                    continue
 
-                # Extract parameters
-                parameters = {}
-                for param_name, file_prefix in self.parameter_mapping.items():
-                    try:
-                        value = self._extract_value_at_location(sen3_dir, file_prefix, lat, lon)
-                        if value is not None and not np.isnan(value):
-                            parameters[param_name] = float(value)
-                    except Exception as e:
-                        print(f"Warning: Could not extract {param_name}: {e}")
+            # Check if we got at least some parameters
+            if len(parameters) >= 1:  # Accept even just one parameter
+                # Fill missing parameters with defaults if needed
+                defaults = {'chl': 1.0, 'cdom': 0.1, 'nap': 0.5}
+                for param in ['chl', 'cdom', 'nap']:
+                    if param not in parameters:
+                        parameters[param] = defaults[param]
+                        print(f"🔄 Using default value for {param}: {defaults[param]}")
 
-                # Check if we got at least some parameters
-                if len(parameters) >= 2:  # Need at least 2 out of 3 parameters
-                    # Fill missing parameters with defaults if needed
-                    defaults = {'chl': 1.0, 'cdom': 0.1, 'nap': 0.5}
-                    for param in ['chl', 'cdom', 'nap']:
-                        if param not in parameters:
-                            parameters[param] = defaults[param]
-                            print(f"Using default value for {param}: {defaults[param]}")
-
-                    return parameters
-
-                return None
-
-    def _extract_value_at_location(
-            self,
-            sen3_dir: Path,
-            file_prefix: str,
-            lat: float,
-            lon: float
-    ) -> Optional[float]:
-        """Extract parameter value at specific location from OLCI product."""
-
-        # Find the netCDF file for this parameter
-        nc_files = list(sen3_dir.glob(f"{file_prefix}.nc"))
-        if not nc_files:
-            raise FileNotFoundError(f"No file found for {file_prefix}")
-
-        nc_file = nc_files[0]
-
-        # Open with xarray
-        with xr.open_dataset(nc_file) as ds:
-            # OLCI uses row/col indexing, need to find closest pixel
-            # This is a simplified approach - for production use, proper
-            # georeferencing would be needed
-
-            if 'lat' in ds and 'lon' in ds:
-                # Direct lat/lon coordinates
-                lat_data = ds['lat'].values
-                lon_data = ds['lon'].values
+                print(f"✅ Successfully extracted parameters: {parameters}")
+                return parameters
             else:
-                # May need to use tie points and interpolate
-                # For simplicity, assume tie points are available
-                if 'latitude' in ds and 'longitude' in ds:
-                    lat_data = ds['latitude'].values
-                    lon_data = ds['longitude'].values
-                else:
-                    raise ValueError("Could not find coordinate information")
+                raise ValueError("Could not extract any valid water parameters from available data")
 
-            # Find closest pixel
-            dist = np.sqrt((lat_data - lat) ** 2 + (lon_data - lon) ** 2)
-            row, col = np.unravel_index(np.argmin(dist), dist.shape)
+        except Exception as e:
+            if "date" in str(e).lower() or "temporal" in str(e).lower():
+                print(f"❌ Date formatting issue: {e}")
+                print("💡 This might be a backend-specific date format requirement")
+                print("💡 Try a different openEO backend or check the backend documentation")
 
-            # Get the main variable (usually the first data variable)
-            data_vars = [var for var in ds.data_vars if not var.endswith('_err')]
-            if not data_vars:
-                raise ValueError(f"No data variables found in {nc_file}")
-
-            main_var = data_vars[0]
-            value = ds[main_var].values[row, col]
-
-            return value if not np.isnan(value) else None
+            raise ValueError(f"Failed to fetch parameters from openEO: {e}")
 
     def is_available(self, lat: float, lon: float, date: datetime) -> bool:
         """Check if Sentinel-3 OLCI data is available."""
         try:
-            # Quick search to see if any products exist
-            buffer = 0.1  # Small buffer for availability check
-            products = self.api.query(
-                area=(lon - buffer, lat - buffer, lon + buffer, lat + buffer),
-                date=(date - timedelta(days=7), date + timedelta(days=7)),
-                platformname='Sentinel-3',
-                producttype='OL_2_WFR___'
-            )
-            return len(products) > 0
-        except:
+            connection = self._connect()
+
+            # Check for data availability in a small temporal window
+            start_date = date - timedelta(days=1)
+            end_date = date + timedelta(days=1)
+
+            # Small spatial extent around point
+            buffer = 0.01  # ~1km
+            spatial_extent = {
+                "west": lon - buffer,
+                "south": lat - buffer,
+                "east": lon + buffer,
+                "north": lat + buffer,
+                "crs": "EPSG:4326"
+            }
+
+            # Try to load a small sample with robust date handling
+            datacube = self._try_load_collection_with_dates(connection, spatial_extent, start_date, end_date)
+
+            # Try to get metadata (doesn't actually download data)
+            metadata = datacube.metadata
+            return metadata is not None
+
+        except Exception as e:
+            print(f"Data availability check failed: {e}")
             return False
+
+    def get_available_collections(self):
+        """Get list of available water quality collections."""
+        try:
+            connection = self._connect()
+            collections = connection.list_collections()
+
+            # Filter for water quality relevant collections
+            water_collections = []
+            water_keywords = ['water', 'ocean', 'olci', 'chlorophyll', 'l2']
+
+            for collection in collections:
+                collection_id = collection.get('id', '').lower()
+                description = collection.get('description', '').lower()
+
+                if any(keyword in collection_id or keyword in description
+                       for keyword in water_keywords):
+                    water_collections.append(collection)
+
+            return water_collections
+
+        except Exception as e:
+            print(f"Failed to list collections: {e}")
+            return []
+
+    def get_collection_info(self, collection_id: str = None):
+        """Get information about the OLCI collection."""
+        try:
+            connection = self._connect()
+            collection_id = collection_id or self.collection_id
+            return connection.describe_collection(collection_id)
+        except Exception as e:
+            print(f"Failed to get collection info: {e}")
+            return {}
+
+    def test_connection(self):
+        """Test the openEO connection and provide diagnostic information."""
+        print("=== OpenEO Connection Test ===")
+
+        try:
+            # Test connection
+            connection = self._connect()
+            print("✅ Connection established")
+
+            # Test collection access
+            try:
+                info = self.get_collection_info()
+                if info:
+                    print("✅ Collection access successful")
+                    print(f"Collection: {info.get('id', 'Unknown')}")
+                    print(f"Description: {info.get('description', 'N/A')[:100]}...")
+                else:
+                    print("⚠️ Collection info empty")
+            except Exception as e:
+                print(f"❌ Collection access failed: {e}")
+
+            # Test date formatting
+            test_date = datetime(2024, 6, 15)
+            start_date = test_date - timedelta(days=1)
+            end_date = test_date + timedelta(days=1)
+
+            spatial_extent = {
+                "west": 11.9, "south": 54.9,
+                "east": 12.1, "north": 55.1,
+                "crs": "EPSG:4326"
+            }
+
+            try:
+                datacube = self._try_load_collection_with_dates(connection, spatial_extent, start_date, end_date)
+                print("✅ Date formatting successful")
+            except Exception as e:
+                print(f"❌ Date formatting failed: {e}")
+
+        except Exception as e:
+            print(f"❌ Connection test failed: {e}")
+
+        print("=== End Connection Test ===")

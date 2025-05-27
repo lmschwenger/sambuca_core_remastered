@@ -1,23 +1,22 @@
 from datetime import datetime
+from typing import List, Optional
 
 from .parameters import InversionParameters
-from ..data_fetchers import Sentinel3OLCIFetcher
 
 
 class ParameterFetcher:
-    """Helper class to fetch and set fixed parameters for inversion."""
+    """Helper class to fetch and set fixed parameters for inversion using openEO."""
 
     def __init__(self, fetcher_type: str = 'sentinel3', **fetcher_kwargs):
         """Initialize parameter fetcher.
 
         Args:
-            fetcher_type: Type of data fetcher ('sentinel3')
+            fetcher_type: Type of data fetcher ('sentinel3') - kept for compatibility
             **fetcher_kwargs: Arguments passed to the fetcher constructor
         """
-        if fetcher_type == 'sentinel3':
-            self.fetcher = Sentinel3OLCIFetcher(**fetcher_kwargs)
-        else:
-            raise ValueError(f"Unknown fetcher type: {fetcher_type}")
+        # Only support sentinel3 (now openEO-based) - ignore fetcher_type for simplicity
+        from ..data_fetchers import Sentinel3OLCIFetcher
+        self.fetcher = Sentinel3OLCIFetcher(**fetcher_kwargs)
 
     def update_parameters_from_satellite(
             self,
@@ -50,6 +49,11 @@ class ParameterFetcher:
 
         print(f"Fetching satellite parameters: {parameters_to_fetch}")
 
+        # Set defaults for openEO fetching
+        fetch_kwargs.setdefault('search_days', 7)
+        fetch_kwargs.setdefault('max_cloud_cover', 30.0)
+        fetch_kwargs.setdefault('buffer_km', 10.0)
+
         # Fetch satellite data
         try:
             sat_params = self.fetcher.fetch_water_parameters(lat, lon, date, **fetch_kwargs)
@@ -79,7 +83,14 @@ class ParameterFetcher:
                 elif param == 'nap':
                     # TSM from satellite, convert to NAP if needed
                     updated_params.nap = None
-                    updated_params.fixed_nap = value / 1000.0  # g/m³ to kg/m³ if needed
+                    updated_params.fixed_nap = value / 1000.0 if value > 10 else value  # Convert units if needed
                     print(f"Set fixed NAP: {value:.3f} g/m³")
 
         return updated_params
+
+    def is_available(self, lat: float, lon: float, date: datetime) -> bool:
+        """Check if satellite data is available."""
+        try:
+            return self.fetcher.is_available(lat, lon, date)
+        except:
+            return False
