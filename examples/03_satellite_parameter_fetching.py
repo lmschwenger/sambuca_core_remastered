@@ -23,9 +23,9 @@ def main():
     output_dir = Path("../data/output/satellite_constrained")
 
     # Image location and date (adjust for your data)
-    image_lat = 56.5  # Latitude of image center
-    image_lon = 12.3  # Longitude of image center
-    image_date = datetime(2017, 8, 23)  # Date of image acquisition
+    image_lat = 56.694  # Latitude of image center
+    image_lon = 11.507  # Longitude of image center
+    image_date = datetime(2024, 6, 15)  # Date of image acquisition
 
     print("=== Satellite-Constrained Bathymetry Processing ===")
     print(f"Location: {image_lat:.3f}°N, {image_lon:.3f}°E")
@@ -49,7 +49,7 @@ def main():
             lon=image_lon,
             date=image_date,
             parameters_to_fetch=['chl', 'cdom', 'nap'],
-            search_days=7,  # Search ±7 days from image date
+            search_days=15,  # Search ±7 days from image date
             max_cloud_cover=30.0,  # Allow up to 30% cloud cover
             buffer_km=10.0  # Search within 10km of location
         )
@@ -156,51 +156,7 @@ def check_satellite_availability():
             print(f"{name} ({lat:.1f}°N, {lon:.1f}°E): ⚠️ Error checking: {e}")
 
 
-def test_openeo_connection():
-    """Test openEO connection and authentication."""
-    print("=== Testing OpenEO Connection ===")
-
-    try:
-        from sambuca_core.data_fetchers import Sentinel3OLCIFetcher
-
-        # Test connection
-        fetcher = Sentinel3OLCIFetcher()
-
-        # Try to connect (this will prompt for authentication if needed)
-        connection = fetcher._connect()
-
-        if connection:
-            print("✅ Successfully connected to openEO backend")
-
-            # List available collections
-            collections = fetcher.get_available_collections()
-            print(f"✅ Found {len(collections)} water-related collections")
-
-            # Test data availability for a known location
-            test_date = datetime(2024, 6, 15)
-            available = fetcher.is_available(55.0, 12.0, test_date)
-            print(f"✅ Data availability test: {'Available' if available else 'Not available'}")
-
-        else:
-            print("❌ Failed to establish connection")
-
-    except ImportError:
-        print("❌ OpenEO not installed. Run: pip install openeo")
-    except Exception as e:
-        print(f"❌ Connection failed: {e}")
-        print("Make sure you have valid credentials or use device authentication")
 
 
 if __name__ == "__main__":
-    # You can run different parts of the example
-    import sys
-
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "--check-availability":
-            check_satellite_availability()
-        elif sys.argv[1] == "--test-connection":
-            test_openeo_connection()
-        else:
-            print("Usage: python 03_satellite_parameter_fetching.py [--check-availability|--test-connection]")
-    else:
-        main()
+    main()

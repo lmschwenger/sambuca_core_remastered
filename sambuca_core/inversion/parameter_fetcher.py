@@ -5,16 +5,16 @@ from .parameters import InversionParameters
 
 
 class ParameterFetcher:
-    """Helper class to fetch and set fixed parameters for inversion using openEO."""
+    """Helper class to fetch and set fixed parameters for inversion using modern openEO."""
 
     def __init__(self, fetcher_type: str = 'sentinel3', **fetcher_kwargs):
         """Initialize parameter fetcher.
 
         Args:
-            fetcher_type: Type of data fetcher ('sentinel3') - kept for compatibility
+            fetcher_type: Type of data fetcher ('sentinel3')
             **fetcher_kwargs: Arguments passed to the fetcher constructor
         """
-        # Only support sentinel3 (now openEO-based) - ignore fetcher_type for simplicity
+        # Only support sentinel3 with modern openEO
         from ..data_fetchers import Sentinel3OLCIFetcher
         self.fetcher = Sentinel3OLCIFetcher(**fetcher_kwargs)
 
@@ -47,11 +47,10 @@ class ParameterFetcher:
         if parameters_to_fetch is None:
             parameters_to_fetch = ['chl', 'cdom', 'nap']
 
-        print(f"Fetching satellite parameters: {parameters_to_fetch}")
+        print(f"🛰️ Fetching satellite parameters: {parameters_to_fetch}")
 
         # Set defaults for openEO fetching
         fetch_kwargs.setdefault('search_days', 7)
-        fetch_kwargs.setdefault('max_cloud_cover', 30.0)
         fetch_kwargs.setdefault('buffer_km', 10.0)
 
         # Fetch satellite data
@@ -60,7 +59,7 @@ class ParameterFetcher:
         except Exception as e:
             raise ValueError(f"Failed to fetch satellite data: {e}")
 
-        # Update inversion parameters
+        # Create a copy of the original parameters to avoid modifying the input
         updated_params = inversion_params
 
         for param in parameters_to_fetch:
@@ -71,20 +70,19 @@ class ParameterFetcher:
                     # Remove chl from inversion bounds and set as fixed
                     updated_params.chl = None
                     updated_params.fixed_chl = value
-                    print(f"Set fixed chlorophyll: {value:.3f} mg/m³")
+                    print(f"📊 Set fixed chlorophyll: {value:.3f} mg/m³")
 
                 elif param == 'cdom':
-                    # For CDOM, satellite gives absorption at 443nm
-                    # Convert to concentration if needed based on your model
+                    # CDOM absorption coefficient
                     updated_params.cdom = None
                     updated_params.fixed_cdom = value
-                    print(f"Set fixed CDOM: {value:.3f} m⁻¹")
+                    print(f"📊 Set fixed CDOM: {value:.4f} m⁻¹")
 
                 elif param == 'nap':
-                    # TSM from satellite, convert to NAP if needed
+                    # Non-algal particles
                     updated_params.nap = None
-                    updated_params.fixed_nap = value / 1000.0 if value > 10 else value  # Convert units if needed
-                    print(f"Set fixed NAP: {value:.3f} g/m³")
+                    updated_params.fixed_nap = value
+                    print(f"📊 Set fixed NAP: {value:.3f} g/m³")
 
         return updated_params
 
@@ -94,3 +92,20 @@ class ParameterFetcher:
             return self.fetcher.is_available(lat, lon, date)
         except:
             return False
+
+    def test_fetcher(self) -> bool:
+        """Test the fetcher connection and functionality."""
+        try:
+            self.fetcher.test_connection()
+            return True
+        except Exception as e:
+            print(f"❌ Fetcher test failed: {e}")
+            return False
+
+    def get_available_collections(self) -> List[str]:
+        """Get list of available collections from the fetcher."""
+        try:
+            return self.fetcher.get_available_collections()
+        except Exception as e:
+            print(f"❌ Failed to get collections: {e}")
+            return []
