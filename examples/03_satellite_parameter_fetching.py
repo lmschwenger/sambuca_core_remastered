@@ -49,7 +49,7 @@ def main():
             lon=image_lon,
             date=image_date,
             parameters_to_fetch=['chl', 'cdom', 'nap'],
-            search_days=15,  # Search ±7 days from image date
+            search_days=5,  # Search ±7 days from image date
             max_cloud_cover=30.0,  # Allow up to 30% cloud cover
             buffer_km=10.0  # Search within 10km of location
         )
