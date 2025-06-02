@@ -1,4 +1,4 @@
-from sambuca_core.inversion import InversionParameters
+from sambuca.core.inversion import InversionParameters
 
 
 class TestInversionParameters:

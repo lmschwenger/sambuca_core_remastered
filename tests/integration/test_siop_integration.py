@@ -9,9 +9,9 @@ import pandas as pd
 from pathlib import Path
 import pytest
 
-import sambuca_core as sbc
-from sambuca_core.sensors import SensorFactory, Sentinel2Sensor
-from sambuca_core.inversion import InversionParameters
+import sambuca.core as sbc
+from sambuca.core.sensors import SensorFactory, Sentinel2Sensor
+from sambuca.core.inversion import InversionParameters
 
 
 class TestSIOPIntegration(unittest.TestCase):

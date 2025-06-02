@@ -1,4 +1,4 @@
-"""Updated integration tests for sambuca_core package."""
+"""Updated integration tests for sambuca.cor package."""
 
 import os
 import shutil
@@ -7,7 +7,7 @@ import unittest
 
 import numpy as np
 
-from sambuca_core.results import ImageInversionResult
+from sambuca.core.results import ImageInversionResult
 
 
 class TestResultsIntegration(unittest.TestCase):

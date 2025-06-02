@@ -19,7 +19,7 @@ def main():
     
     try:
         # Import and run the GUI
-        from gui.app import SambucaGuiApp
+        from sambuca.gui.app import SambucaGuiApp
         
         print("Starting Sambuca Core GUI...")
         app = SambucaGuiApp()

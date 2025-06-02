@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 import rasterio
 
-from sambuca_core.io import RasterImageLoader, ImagePreprocessor
-from sambuca_core.inversion import InversionParameters, process_image
-from sambuca_core import SIOPManager
+from sambuca.core.io import RasterImageLoader, ImagePreprocessor
+from sambuca.core.inversion import InversionParameters, process_image
+from sambuca.core import SIOPManager
 
 
 class TestImageProcessingIntegration(unittest.TestCase):

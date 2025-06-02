@@ -6,8 +6,8 @@ import unittest
 import numpy as np
 import pandas as pd
 
-import sambuca_core as sbc
-from sambuca_core.inversion import InversionParameters, LookUpTable
+import sambuca.core as sbc
+from sambuca.core.inversion import InversionParameters, LookUpTable
 
 
 class TestLookUpTableIntegration(unittest.TestCase):
