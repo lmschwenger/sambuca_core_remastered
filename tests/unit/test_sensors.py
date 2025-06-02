@@ -1,6 +1,6 @@
 import pytest
 
-from sambuca_core.sensors import SensorFactory, Sentinel2Sensor
+from sambuca.core.sensors import SensorFactory, Sentinel2Sensor
 
 
 class TestSensors:

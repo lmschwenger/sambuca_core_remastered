@@ -1,4 +1,4 @@
-import sambuca_core as sbc
+import sambuca.core as sbc
 
 class TestUtilities:
     """Test utility functions."""

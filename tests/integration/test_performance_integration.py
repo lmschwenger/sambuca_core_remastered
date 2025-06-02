@@ -10,10 +10,10 @@ import pandas as pd
 from pathlib import Path
 import pytest
 
-import sambuca_core as sbc
-from sambuca_core.workflows import BathymetryWorkflow
-from sambuca_core.inversion import InversionParameters, invert_spectrum, process_image
-from sambuca_core.inversion.lut import LookUpTable
+import sambuca.core as sbc
+from sambuca.core.workflows import BathymetryWorkflow
+from sambuca.core.inversion import InversionParameters, invert_spectrum, process_image
+from sambuca.core.inversion.lut import LookUpTable
 
 
 @pytest.mark.performance

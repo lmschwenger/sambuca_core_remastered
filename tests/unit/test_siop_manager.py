@@ -5,7 +5,7 @@ import tempfile
 import numpy as np
 import pytest
 
-import sambuca_core as sbc
+import sambuca.core as sbc
 
 
 class TestSIOPManager:

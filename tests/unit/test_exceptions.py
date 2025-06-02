@@ -1,6 +1,6 @@
 import pytest
 
-from sambuca_core import SambucaException, DataValidationError
+from sambuca.core import SambucaException, DataValidationError
 
 
 class TestExceptions:

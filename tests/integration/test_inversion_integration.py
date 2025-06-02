@@ -9,15 +9,15 @@ import pandas as pd
 from pathlib import Path
 import pytest
 
-import sambuca_core as sbc
-from sambuca_core.inversion import (
+import sambuca.core as sbc
+from sambuca.core.inversion import (
     InversionParameters,
     invert_spectrum,
     multi_start_inversion,
     process_image
 )
-from sambuca_core.inversion.lut import LookUpTable
-from sambuca_core.inversion.objective_functions import (
+from sambuca.core.inversion.lut import LookUpTable
+from sambuca.core.inversion.objective_functions import (
     spectral_rmse,
     spectral_angle_mapper,
     spectral_rmse_with_nedr

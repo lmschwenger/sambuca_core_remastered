@@ -7,8 +7,8 @@ import tempfile
 import numpy as np
 import pytest
 
-import sambuca_core as sbc
-from sambuca_core.inversion import InversionParameters, invert_spectrum
+import sambuca.core as sbc
+from sambuca.core.inversion import InversionParameters, invert_spectrum
 
 
 class TestForwardModel:

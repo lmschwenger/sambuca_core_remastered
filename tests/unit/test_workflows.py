@@ -4,7 +4,7 @@ import tempfile
 
 import numpy as np
 
-from sambuca_core.workflows import BathymetryWorkflow
+from sambuca.core.workflows import BathymetryWorkflow
 
 
 class TestWorkflows:

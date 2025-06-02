@@ -9,8 +9,8 @@ import pandas as pd
 from pathlib import Path
 import pytest
 
-from sambuca_core.workflows import BathymetryWorkflow
-from sambuca_core.results import ImageInversionResult
+from sambuca.core.workflows import BathymetryWorkflow
+from sambuca.core.results import ImageInversionResult
 
 
 class TestBathymetryWorkflowIntegration(unittest.TestCase):
@@ -205,7 +205,7 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
             loader = workflow.image_loader
             image_data = loader.load(self.test_image_path)
 
-            from sambuca_core.io import ImagePreprocessor
+            from sambuca.core.io import ImagePreprocessor
             rgb = ImagePreprocessor.create_rgb_preview(image_data)
 
             # Check RGB output
