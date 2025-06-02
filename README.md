@@ -26,13 +26,25 @@ SAMBUCA Core is a modernized Python implementation of the physics-based radiativ
 ```bash
 git clone https://github.com/lmschwenger/sambuca_core_remastered.git
 cd sambuca_core_remastered
+
+# Basic installation
 pip install -e .
+
+# Or with GUI support
+pip install -e .[gui]
+
+# Or complete installation with all features
+pip install -e .[complete]
 ```
 
 **Or install directly from GitHub:**
 
 ```bash
+# Basic installation
 pip install git+https://github.com/lmschwenger/sambuca_core_remastered.git
+
+# With GUI support
+pip install "git+https://github.com/lmschwenger/sambuca_core_remastered.git[gui]"
 ```
 
 ### Basic Usage
@@ -42,13 +54,13 @@ import sambuca_core as sbc
 import numpy as np
 
 # 1. Set up SIOP manager and load spectral libraries
-siop_manager = sbc.SIOPManager("path/to/siop_directory")
+siop_manager = sbc.SIOPManager("data/")  # Use included spectral libraries
 siop_manager.register_sensor("Sentinel-2", [492.4, 559.8, 664.6, 704.1])
 
-# 2. Run forward model
-wavelengths = [492.4, 559.8, 664.6, 704.1]  # Sentinel-2 bands
+# 2. Get standard SIOPs for Sentinel-2
 siops = siop_manager.get_standard_siops("Sentinel-2")
 
+# 3. Run forward model
 results = sbc.forward_model(
     chl=1.5,           # Chlorophyll concentration (mg/m³)
     cdom=0.5,          # CDOM absorption (1/m)
@@ -58,11 +70,11 @@ results = sbc.forward_model(
     wavelengths=siops['wavelengths'],
     a_water=siops['a_water'],
     a_ph_star=siops['a_ph_star'],
-    num_bands=len(wavelengths)
+    num_bands=siops['num_bands']
 )
 
 print(f"Modeled reflectance: {results.rrs}")
-print(f"Water depth: {results.depth} m")
+print(f"Number of bands: {siops['num_bands']}")
 ```
 
 ### Single Pixel Inversion
@@ -70,7 +82,7 @@ print(f"Water depth: {results.depth} m")
 ```python
 from sambuca_core.inversion import InversionParameters, invert_spectrum
 
-# Observed reflectance (e.g., from satellite pixel)
+# Observed reflectance (e.g., from Sentinel-2 pixel)
 observed_rrs = np.array([0.012, 0.015, 0.008, 0.006])
 
 # Set up inversion parameters
@@ -78,10 +90,10 @@ params = InversionParameters(
     depth=(0, 25),      # Invert for depth (0-25m range)
     chl=(0.1, 10.0),    # Invert for chlorophyll (0.1-10 mg/m³)
     cdom=(0.01, 2.0),   # Invert for CDOM (0.01-2.0 m⁻¹)
-    wavelengths=wavelengths
+    wavelengths=siops['wavelengths']
 )
 
-# Update with SIOPs
+# Update with SIOPs from manager
 params.update_from_siop_manager(siop_manager, "Sentinel-2")
 
 # Run inversion
@@ -96,11 +108,16 @@ print(f"Estimation error (RMSE): {result.objective_value:.6f}")
 
 ```python
 from sambuca_core.inversion import process_image
-import rasterio
 
-# Load satellite image
-with rasterio.open("satellite_image.tif") as src:
-    image = src.read().transpose(1, 2, 0)  # Shape: (height, width, bands)
+# Load Sentinel-2 image (assuming pre-processed reflectance data)
+# Image should be in shape (height, width, 4) for the 4 Sentinel-2 bands
+# You can use rasterio, numpy, or other tools to load your data
+import numpy as np
+
+# Example: Load your preprocessed Sentinel-2 reflectance image
+# image = your_image_loading_function("sentinel2_reflectance.tif")
+# For demo purposes, create synthetic data:
+image = np.random.random((100, 100, 4)) * 0.05  # Shape: (height, width, bands)
 
 # Process entire image
 results = process_image(
@@ -131,39 +148,50 @@ SAMBUCA can simultaneously estimate multiple water column and benthic properties
 ## 🛰️ Supported Sensors
 
 - **Sentinel-2** (MSI) - 10-60m resolution
-- **Landsat 8/9** (OLI) - 30m resolution  
-- **MODIS** (Terra/Aqua) - 250m-1km resolution
 - **Custom sensors** - Define your own wavelengths
 
-## 📁 Repository Structure
+## 🎯 Working Examples
 
-```
-sambuca_core/
-├── sambuca_core/              # Core package
-│   ├── forward_model.py       # Semi-analytical radiative transfer model
-│   ├── siop_manager.py        # Spectral library management
-│   ├── sensor_filter.py       # Sensor response functions
-│   └── inversion/             # Inversion algorithms
-│       ├── optimization.py    # Scipy-based optimization
-│       ├── lut.py            # Lookup table methods
-│       └── pixel_processor.py # Image processing
-├── examples/                  # Working examples
-│   ├── basic/                # Simple demonstrations
-│   ├── intermediate/         # Image processing workflows  
-│   └── advanced/            # Complex analysis pipelines
-├── data/                     # Reference SIOP libraries
-└── tests/                   # Unit and integration tests
-```
+The repository includes working examples to help you get started:
 
-## 🎯 Examples & Tutorials
+### GUI Application
+```bash
+# Launch the graphical interface
+sambuca-gui
+# or
+python run_gui.py
+```
 
 ### Basic Examples
-- **[Forward Model Demo](examples/basic/01_basic_forward_model_example.py)** - Run the radiative transfer model
-- **[SIOP Management](examples/basic/02_siop_and_sensor_example.py)** - Load and interpolate spectral libraries
-- **[Single Pixel Inversion](examples/basic/03_simple_inversion_example.py)** - Estimate water properties from a spectrum
+Check the `examples/` directory for:
+- **Forward Model Demo** - Run the radiative transfer model
+- **SIOP Management** - Load and interpolate spectral libraries  
+- **Single Pixel Inversion** - Estimate water properties from a spectrum
 
-### Advanced Examples
-- **[Full Image Workflow](examples/advanced/full_image_inversion.py)** - Complete Sentinel-2 processing pipeline
+### Advanced Usage
+- **Image Processing** - Process full Sentinel-2 scenes
+- **Custom Sensors** - Define your own wavelength configurations
+- **Parameter Studies** - Explore model sensitivity
+
+## 📚 Getting Started
+
+### Quick Test
+```bash
+# Verify installation
+python test_installation.py
+
+# Test core functionality
+python -m sambuca_core
+
+# Launch GUI
+sambuca-gui
+```
+
+### Example Workflow
+1. **Install** the package with GUI support: `pip install -e .[gui]`
+2. **Launch GUI** to explore the interface: `sambuca-gui`
+3. **Check examples** directory for code samples
+4. **Load your data** and start processing Sentinel-2 imagery
 ## 🔬 Scientific Background
 
 SAMBUCA implements the semi-analytical radiative transfer model described in:
@@ -190,14 +218,29 @@ The model accounts for:
 
 ### Requirements
 - Python 3.8+
-- NumPy >= 1.19
-- SciPy >= 1.7
-- Pandas >= 1.3
-- Rasterio >= 1.2 (for satellite image I/O)
-- Matplotlib >= 3.3 (for visualization)
-- tqdm >= 4.60 (for progress bars)
+- NumPy >= 1.20.0
+- SciPy >= 1.7.0
+- Pandas >= 1.3.0
+- Matplotlib >= 3.5.0 (required for GUI)
 
-> **Note**: If you don't have a `requirements.txt` file yet, you can create one with these dependencies or install them manually with pip.
+### Installation Options
+
+```bash
+# Core functionality only
+pip install -e .
+
+# With GUI support
+pip install -e .[gui]
+
+# With raster processing capabilities
+pip install -e .[raster]  # Includes rasterio, gdal
+
+# Complete installation with all features
+pip install -e .[complete]
+
+# Development installation
+pip install -e .[dev]  # Includes testing, linting tools
+```
 
 ### Development Installation
 
@@ -207,24 +250,12 @@ The model accounts for:
 git clone https://github.com/lmschwenger/sambuca_core_remastered.git
 cd sambuca_core_remastered
 
-# Install dependencies manually if needed:
-pip install numpy scipy pandas rasterio matplotlib tqdm
+# Install with development dependencies
+pip install -e .[dev]
 
-# Then install in development mode:
-pip install -e .
-```
-
-### Optional Dependencies
-
-```bash
-# For advanced optimization methods
-pip install scikit-optimize
-
-# For faster numerical operations  
-pip install numba
-
-# For Jupyter notebook tutorials
-pip install jupyter ipywidgets
+# Run tests
+python test_installation.py
+pytest tests/
 ```
 
 ## 📖 Documentation
