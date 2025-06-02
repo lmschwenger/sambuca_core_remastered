@@ -42,7 +42,7 @@ def main():
     print("Building LUT with 30 depth levels...")
     start_time = time.time()
     lut.build_table(
-        grid_size=30,  # 30 depth values from 0-25m
+        grid_size=200,  # 30 depth values from 0-25m
         progress_bar=True,
         use_kdtree=True  # Enable fast lookups
     )
