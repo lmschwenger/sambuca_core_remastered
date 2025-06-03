@@ -1,0 +1,16 @@
+# GUI-specific requirements for Sambuca Core GUI
+# These are in addition to the main sambuca_core requirements
+
+# GUI Framework (usually included with Python)
+# tkinter  # Built-in with most Python installations
+
+# Plotting and visualization
+matplotlib>=3.5.0
+numpy>=1.20.0
+
+# Optional: Enhanced GUI themes and widgets
+# ttkthemes>=3.2.0  # Uncomment for additional themes
+# tkinter-tooltip>=2.2.0  # Uncomment for enhanced tooltips
+
+# The main sambuca_core package should be installed separately
+# either through pip install or by having the parent directory in PYTHONPATH
