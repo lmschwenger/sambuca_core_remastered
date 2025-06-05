@@ -1,0 +1,46 @@
+# Read the Docs configuration file for SAMBUCA Core Remastered
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+# Set the OS, Python version and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.11"
+  jobs:
+    post_create_environment:
+      # Install poetry if you're using it (optional)
+      - pip install --upgrade pip setuptools wheel
+    post_install:
+      # Install your package in development mode
+      - pip install -e .
+
+# Build documentation in the "docs/" directory with Sphinx
+sphinx:
+  configuration: docs/source/conf.py
+  fail_on_warning: false
+
+# Python requirements for building documentation
+python:
+  install:
+    - requirements: docs/requirements.txt
+    - requirements: requirements.txt
+    - method: pip
+      path: .
+
+# Formats of output documentation
+formats:
+  - pdf
+  - htmlzip
+  - epub
+
+# Optional but recommended: specify search ranking
+search:
+  ranking:
+    source/index.rst: 10
+    source/installation.rst: 8
+    source/quickstart.rst: 9
+    source/user_guide/*.rst: 7
+    source/api/*.rst: 5
