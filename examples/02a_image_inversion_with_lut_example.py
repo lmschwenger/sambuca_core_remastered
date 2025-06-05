@@ -9,8 +9,8 @@ from pathlib import Path
 
 import numpy as np
 
-from sambuca_core.workflows import BathymetryWorkflow
-from sambuca_core.inversion import LookUpTable, process_image
+from sambuca.core.workflows import BathymetryWorkflow
+from sambuca.core.inversion import LookUpTable, process_image
 
 
 def main():
@@ -27,9 +27,9 @@ def main():
     # Set up for depth-only inversion (fastest LUT option)
     workflow.customize_parameters(
         depth=(0, 25),
-        fixed_chl=0.5,
+        fixed_chl=5.6,
         fixed_nap=0.001,
-        fixed_cdom=0.0025,
+        fixed_cdom=0.09,
         fixed_substrate_fraction=1,
     )
 
@@ -82,7 +82,7 @@ def main():
     # Save results
     os.makedirs(output_dir, exist_ok=True)
 
-    from sambuca_core.results import ImageInversionResult
+    from sambuca.core.results import ImageInversionResult
     result_obj = ImageInversionResult(
         results=results,
         image_metadata=image_data.metadata,

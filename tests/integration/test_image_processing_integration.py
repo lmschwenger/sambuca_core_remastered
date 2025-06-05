@@ -89,7 +89,7 @@ class TestImageProcessingIntegration(unittest.TestCase):
                 self.assertTrue(np.all(valid_data >= 0))
                 self.assertTrue(np.all(valid_data <= 1))
 
-            print(f"✓ Basic image loading test passed: {image_data.shape}")
+            print(f" Basic image loading test passed: {image_data.shape}")
 
         except Exception as e:
             self.fail(f"Image loading failed: {e}")
@@ -109,7 +109,7 @@ class TestImageProcessingIntegration(unittest.TestCase):
             # Check that we got the right number of bands
             self.assertEqual(image_data.shape[2], 4)
 
-            print(f"✓ Band selection test passed: {image_data.shape}")
+            print(f" Band selection test passed: {image_data.shape}")
 
         except Exception as e:
             self.skipTest(f"Band selection test failed: {e}")
@@ -141,7 +141,7 @@ class TestImageProcessingIntegration(unittest.TestCase):
             )
             self.assertEqual(len(pixel_spectrum), image_data.shape[2])
 
-            print("✓ Image preprocessing tests passed")
+            print(" Image preprocessing tests passed")
 
         except Exception as e:
             self.skipTest(f"Image preprocessing failed: {e}")
@@ -167,7 +167,7 @@ class TestImageProcessingIntegration(unittest.TestCase):
             # Should have some valid pixels
             self.assertTrue(np.any(water_mask))
 
-            print(f"✓ Water mask test passed: {np.sum(water_mask)} valid pixels")
+            print(f" Water mask test passed: {np.sum(water_mask)} valid pixels")
 
         except Exception as e:
             self.skipTest(f"Water mask test failed: {e}")
@@ -228,7 +228,7 @@ class TestImageProcessingIntegration(unittest.TestCase):
             if len(valid_depths) > 0:
                 self.assertTrue(np.all(valid_depths >= 0))
                 self.assertTrue(np.all(valid_depths <= 50))  # Reasonable depth range
-                print(f"✓ Processed {len(valid_depths)} valid pixels")
+                print(f" Processed {len(valid_depths)} valid pixels")
             else:
                 print("⚠️ No valid depth retrievals (may be expected for test data)")
 
@@ -256,7 +256,7 @@ class TestImageProcessingIntegration(unittest.TestCase):
                 self.assertIsNotNone(image_data.metadata)
                 self.assertTrue(image_data.is_bands_last)
 
-                print(f"✓ {image_name} loaded successfully: {image_data.shape}")
+                print(f" {image_name} loaded successfully: {image_data.shape}")
 
             except Exception as e:
                 print(f"⚠️ {image_name} failed to load: {e}")
@@ -285,7 +285,7 @@ class TestImageProcessingIntegration(unittest.TestCase):
                 self.assertGreaterEqual(min_val, 0)
                 self.assertLessEqual(max_val, 1)
 
-                print(f"✓ Data scaling test passed: range {min_val:.4f} - {max_val:.4f}")
+                print(f" Data scaling test passed: range {min_val:.4f} - {max_val:.4f}")
 
         except Exception as e:
             self.skipTest(f"Data scaling test failed: {e}")
@@ -325,7 +325,7 @@ class TestImageProcessingIntegration(unittest.TestCase):
             # (e.g., don't load entire image into different formats)
             total_pixels = image_data.shape[0] * image_data.shape[1]
 
-            print(f"✓ Large image handling test passed: {total_pixels} pixels")
+            print(f" Large image handling test passed: {total_pixels} pixels")
 
         except Exception as e:
             self.skipTest(f"Large image handling failed: {e}")

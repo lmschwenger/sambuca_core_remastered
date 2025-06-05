@@ -4,7 +4,7 @@ Bathymetry Processing Example
 """
 import os
 
-from sambuca_core.workflows import BathymetryWorkflow
+from sambuca.core.workflows import BathymetryWorkflow
 from pathlib import Path
 
 

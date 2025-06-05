@@ -1,0 +1,220 @@
+/* Custom CSS for SAMBUCA Core Documentation */
+
+/* Improved code block styling */
+.highlight {
+    border-radius: 6px;
+    border: 1px solid #e1e4e8;
+}
+
+/* Better table styling */
+table.docutils {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 1em 0;
+}
+
+table.docutils th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid #d0d7de;
+}
+
+table.docutils td {
+    padding: 8px 12px;
+    border: 1px solid #d0d7de;
+}
+
+/* Enhanced admonitions */
+.admonition {
+    border-radius: 6px;
+    border-left: 4px solid;
+    margin: 1em 0;
+    padding: 1em;
+}
+
+.admonition.note {
+    border-left-color: #0969da;
+    background-color: #f6f8ff;
+}
+
+.admonition.warning {
+    border-left-color: #d1242f;
+    background-color: #fff8f8;
+}
+
+.admonition.tip {
+    border-left-color: #1f883d;
+    background-color: #f6fff8;
+}
+
+/* Improved inline code */
+code {
+    background-color: #f6f8fa;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 0.9em;
+    color: #24292f;
+}
+
+/* Navigation improvements */
+.wy-menu-vertical a {
+    color: #404040;
+    transition: color 0.2s ease;
+}
+
+.wy-menu-vertical a:hover {
+    color: #2980b9;
+}
+
+/* Header styling for better hierarchy */
+h1 {
+    border-bottom: 2px solid #eaecef;
+    padding-bottom: 0.3em;
+    color: #24292f;
+}
+
+h2 {
+    border-bottom: 1px solid #eaecef;
+    padding-bottom: 0.3em;
+    color: #24292f;
+}
+
+/* Enhanced badges and buttons */
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.4em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+}
+
+.badge-primary {
+    color: #fff;
+    background-color: #007bff;
+}
+
+.badge-success {
+    color: #fff;
+    background-color: #28a745;
+}
+
+.badge-warning {
+    color: #212529;
+    background-color: #ffc107;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .wy-table-responsive table td,
+    .wy-table-responsive table th {
+        white-space: normal !important;
+    }
+}
+
+/* Custom list styling for feature lists */
+.feature-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.feature-list li {
+    padding: 0.5em 0;
+    border-bottom: 1px solid #eaecef;
+}
+
+.feature-list li:before {
+    content: "✓ ";
+    color: #28a745;
+    font-weight: bold;
+    margin-right: 0.5em;
+}
+
+/* Syntax highlighting improvements */
+.highlight pre {
+    padding: 1em;
+    overflow-x: auto;
+    line-height: 1.4;
+}
+
+/* Footer improvements */
+.rst-footer-buttons {
+    margin-top: 2em;
+    padding-top: 1em;
+    border-top: 1px solid #eaecef;
+}
+
+/* Version selector styling */
+.rst-versions {
+    border-top: 2px solid #2980b9;
+}
+
+/* Search box improvements */
+.wy-side-nav-search input[type=text] {
+    border-radius: 6px;
+    border: 1px solid #d0d7de;
+    padding: 8px 12px;
+}
+
+/* Custom styles for SAMBUCA-specific content */
+.sambuca-equation {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 1em;
+    margin: 1em 0;
+    text-align: center;
+}
+
+.parameter-table {
+    width: 100%;
+    margin: 1em 0;
+}
+
+.parameter-table th {
+    background-color: #2980b9;
+    color: white;
+    font-weight: 600;
+}
+
+/* Code example styling */
+.code-example {
+    margin: 1em 0;
+}
+
+.code-example .highlight {
+    margin-bottom: 0.5em;
+}
+
+.code-example .caption {
+    font-style: italic;
+    color: #6c757d;
+    margin-bottom: 0.5em;
+}
+
+/* Improved figure captions */
+.figure .caption {
+    font-style: italic;
+    text-align: center;
+    margin-top: 0.5em;
+    color: #6c757d;
+}
+
+/* Enhanced breadcrumb navigation */
+.wy-breadcrumbs {
+    margin-bottom: 1em;
+}
+
+.wy-breadcrumbs a {
+    color: #2980b9;
+    text-decoration: none;
+}
+
+.wy-breadcrumbs a:hover {
+    text-decoration: underline;
+}

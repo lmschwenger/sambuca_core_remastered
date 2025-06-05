@@ -121,7 +121,7 @@ class TestSIOPIntegration(unittest.TestCase):
         for lib in expected_libs:
             self.assertIn(lib, libraries, f"Should load {lib}")
 
-        print(f"✓ Loaded {len(libraries)} SIOP libraries")
+        print(f" Loaded {len(libraries)} SIOP libraries")
 
     def test_sensor_configurations(self):
         """Test built-in sensor configurations."""
@@ -141,7 +141,7 @@ class TestSIOPIntegration(unittest.TestCase):
         self.assertEqual(len(bands), len(wls))
         self.assertIn('B2', bands)
 
-        print(f"✓ Sentinel-2 sensor: {len(wavelengths)} bands, bathymetry config: {len(bands)} bands")
+        print(f" Sentinel-2 sensor: {len(wavelengths)} bands, bathymetry config: {len(bands)} bands")
 
     def test_sensor_registration_and_interpolation(self):
         """Test sensor registration and SIOP interpolation."""
@@ -175,7 +175,7 @@ class TestSIOPIntegration(unittest.TestCase):
                     self.assertIn(siop_name, siops)
                     self.assertEqual(len(siops[siop_name]), len(wavelengths))
 
-                print(f"✓ {sensor_name} interpolation successful")
+                print(f" {sensor_name} interpolation successful")
 
     def test_interpolation_quality(self):
         """Test quality of SIOP interpolation."""
@@ -201,7 +201,7 @@ class TestSIOPIntegration(unittest.TestCase):
                 rel_error = abs(interpolated_value - original_value) / original_value
                 self.assertLess(rel_error, 0.01, f"Interpolation error too large at {wl}nm")
 
-        print("✓ Interpolation quality test passed")
+        print(" Interpolation quality test passed")
 
     def test_standard_siops_retrieval(self):
         """Test standard SIOP retrieval for forward model."""
@@ -229,7 +229,7 @@ class TestSIOPIntegration(unittest.TestCase):
             if 'substrate2' in std_siops:
                 self.assertEqual(len(std_siops['substrate2']), n_bands)
 
-            print("✓ Standard SIOPs retrieval successful")
+            print(" Standard SIOPs retrieval successful")
 
         except KeyError as e:
             self.fail(f"Standard SIOP retrieval failed: missing {e}")
@@ -265,7 +265,7 @@ class TestSIOPIntegration(unittest.TestCase):
         self.assertTrue(np.all(np.array(params.substrate1) >= 0))
         self.assertTrue(np.all(np.array(params.substrate1) <= 1))
 
-        print("✓ SIOP-parameter integration successful")
+        print(" SIOP-parameter integration successful")
 
     def test_forward_model_with_interpolated_siops(self):
         """Test forward model using interpolated SIOPs."""
@@ -298,7 +298,7 @@ class TestSIOPIntegration(unittest.TestCase):
             self.assertTrue(np.all(results.bb > 0))
 
             print(
-                f"✓ Forward model with interpolated SIOPs: rrs range {np.min(results.rrs):.4f}-{np.max(results.rrs):.4f}")
+                f" Forward model with interpolated SIOPs: rrs range {np.min(results.rrs):.4f}-{np.max(results.rrs):.4f}")
 
         except Exception as e:
             self.fail(f"Forward model with interpolated SIOPs failed: {e}")
@@ -349,7 +349,7 @@ class TestSIOPIntegration(unittest.TestCase):
             mean_diff = np.mean(np.abs(rrs1 - rrs2))
             self.assertGreater(mean_diff, 0.0001, "Different substrates should give different spectra")
 
-            print(f"✓ Multi-substrate test: {len(substrate_results)} substrates, mean diff: {mean_diff:.4f}")
+            print(f" Multi-substrate test: {len(substrate_results)} substrates, mean diff: {mean_diff:.4f}")
 
     def test_error_handling(self):
         """Test error handling in SIOP management."""
@@ -366,7 +366,7 @@ class TestSIOPIntegration(unittest.TestCase):
         with self.assertRaises(ValueError):
             SensorFactory.create('unknown_sensor')
 
-        print("✓ Error handling tests passed")
+        print(" Error handling tests passed")
 
     def test_wavelength_range_coverage(self):
         """Test SIOP coverage across different wavelength ranges."""
@@ -394,7 +394,7 @@ class TestSIOPIntegration(unittest.TestCase):
                     self.assertTrue(np.all(np.isfinite(water_abs)))
                     self.assertTrue(np.all(water_abs > 0))
 
-                    print(f"✓ {range_name} range coverage successful")
+                    print(f" {range_name} range coverage successful")
 
                 except Exception as e:
                     print(f"⚠️ {range_name} range failed: {e}")
@@ -424,7 +424,7 @@ class TestSIOPIntegration(unittest.TestCase):
             found = any(lib in abs_lib for abs_lib in absorption_libs)
             self.assertTrue(found, f"Should find {lib} in absorption category")
 
-        print(f"✓ Library organization: {len(absorption_libs)} absorption, "
+        print(f" Library organization: {len(absorption_libs)} absorption, "
               f"{len(substrate_libs)} substrate libraries")
 
 
