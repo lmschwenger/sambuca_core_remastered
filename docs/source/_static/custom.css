@@ -60,12 +60,25 @@ code {
 
 /* Navigation improvements */
 .wy-menu-vertical a {
-    color: #404040;
+    color: #ffffff;  /* White text for dark backgrounds */
     transition: color 0.2s ease;
 }
 
+/* Subtitles (nested items) - slightly dimmed but still visible */
+.wy-menu-vertical li.toctree-l2 a,
+.wy-menu-vertical li.toctree-l3 a,
+.wy-menu-vertical li.toctree-l4 a {
+    color: #e8e8e8;  /* Light gray for subtitles */
+}
+
 .wy-menu-vertical a:hover {
-    color: #2980b9;
+    color: #5dade2;  /* Light blue on hover for visibility */
+}
+
+/* Current page highlighting */
+.wy-menu-vertical li.current > a {
+    color: #5dade2;
+    font-weight: bold;
 }
 
 /* Header styling for better hierarchy */
