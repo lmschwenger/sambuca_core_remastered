@@ -267,13 +267,13 @@ After installation, verify that SAMBUCA Core is working correctly:
 
 .. code-block:: bash
 
-   python -c "import sambuca_core as sbc; print(f'SAMBUCA Core v{sbc.__version__} installed successfully')"
+   python -c "import sambuca.core as sbc; print(f'SAMBUCA Core v{sbc.__version__} installed successfully')"
 
 **Run Built-in Tests:**
 
 .. code-block:: bash
 
-   python -m sambuca_core
+   python -m sambuca.core
 
 **Launch GUI (if installed with GUI support):**
 
@@ -285,7 +285,7 @@ After installation, verify that SAMBUCA Core is working correctly:
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    import numpy as np
 
    # Create test data

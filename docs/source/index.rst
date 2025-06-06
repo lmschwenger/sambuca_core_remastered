@@ -69,7 +69,7 @@ Quick Start
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    import numpy as np
 
    # 1. Set up SIOP manager and load spectral libraries

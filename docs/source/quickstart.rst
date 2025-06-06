@@ -39,7 +39,7 @@ Basic Forward Model
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    import numpy as np
 
    # Define basic parameters
@@ -89,7 +89,7 @@ Setting Up SIOP Manager
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
 
    # Initialize SIOP manager with spectral libraries
    siop_manager = sbc.SIOPManager("data/")  # Path to your spectral data
@@ -134,7 +134,7 @@ Basic Inversion Setup
 
 .. code-block:: python
 
-   from sambuca_core.inversion import InversionParameters, invert_spectrum
+   from sambuca.core.inversion import InversionParameters, invert_spectrum
    
    # Observed reflectance (from Sentinel-2 pixel)
    observed_rrs = np.array([0.012, 0.015, 0.008, 0.006])
@@ -178,7 +178,7 @@ Preparing Image Data
 .. code-block:: python
 
    import numpy as np
-   from sambuca_core.inversion import process_image
+   from sambuca.core.inversion import process_image
    
    # Example: Load your Sentinel-2 reflectance image
    # In practice, use rasterio or your preferred geospatial library
@@ -326,10 +326,10 @@ Here's a complete workflow combining all elements:
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    import numpy as np
    import matplotlib.pyplot as plt
-   from sambuca_core.inversion import InversionParameters, invert_spectrum
+   from sambuca.core.inversion import InversionParameters, invert_spectrum
 
    # 1. Set up SIOP manager
    print("Setting up SIOP manager...")

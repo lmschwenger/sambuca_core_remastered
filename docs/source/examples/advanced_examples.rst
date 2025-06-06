@@ -24,8 +24,8 @@ Loading Sentinel-2 Data
 
 .. code-block:: python
 
-   import sambuca_core as sbc
-   from sambuca_core.inversion import InversionParameters, process_image
+   import sambuca.core as sbc
+   from sambuca.core.inversion import InversionParameters, process_image
    import numpy as np
    import rasterio
    import matplotlib.pyplot as plt

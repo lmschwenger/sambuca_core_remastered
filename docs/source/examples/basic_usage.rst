@@ -10,7 +10,7 @@ First, make sure SAMBUCA Core is installed and working:
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    import numpy as np
    import matplotlib.pyplot as plt
    
@@ -26,7 +26,7 @@ Simple Forward Model
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    import numpy as np
    
    # Define water conditions
@@ -163,7 +163,7 @@ Single Pixel Inversion
 
 .. code-block:: python
 
-   from sambuca_core.inversion import InversionParameters, invert_spectrum
+   from sambuca.core.inversion import InversionParameters, invert_spectrum
    
    # Simulate observed reflectance (from previous forward model)
    observed_rrs = np.array([0.0089, 0.0134, 0.0051, 0.0039])

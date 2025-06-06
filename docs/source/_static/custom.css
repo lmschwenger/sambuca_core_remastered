@@ -71,6 +71,15 @@ code {
     color: #e8e8e8;  /* Light gray for subtitles */
 }
 
+/* Expanded menu items (white background) - text should be black */
+.wy-menu-vertical li.current ul li a {
+    color: #404040 !important;  /* Dark text for light backgrounds */
+}
+
+.wy-menu-vertical li.current ul li a:hover {
+    color: #2980b9 !important;  /* Dark blue hover for light backgrounds */
+}
+
 .wy-menu-vertical a:hover {
     color: #5dade2;  /* Light blue on hover for visibility */
 }
