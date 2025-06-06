@@ -16,7 +16,7 @@ from sambuca.core.inversion import LookUpTable, process_image
 def main():
     # Define paths
     siop_dir = Path("../data/siops")
-    image_path = Path("../data/input/anholt_20170823_b02b09.tif")
+    image_path = Path("../data/input/examples/anholt_20170823_b02b09.tif")
     output_dir = Path("../data/output/simple_lut_example")
 
     print("Building LUT for fast bathymetry processing...")

@@ -11,8 +11,8 @@ from pathlib import Path
 def main():
     # Define paths
     siop_dir = Path("../data/siops")
-    image_path = Path("../data/input/examples/advanced/anholt_20170823_b02b09_clipped2.tif")
-    mask_path = Path("../data/input/examples/advanced/S2_L2A_20180508_B01-B05_ndwi_clipped2.tif")
+    image_path = Path("../data/input/examples/anholt_20170823_b02b09_clipped2.tif")
+    mask_path = Path("../data/input/examples/S2_L2A_20180508_B01-B05_ndwi_clipped2.tif")
     output_dir = Path("../data/output/simple_example")
 
     # Create workflow - this handles all the setup automatically!
