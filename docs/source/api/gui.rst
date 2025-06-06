@@ -1,7 +1,7 @@
 GUI Module
 ==========
 
-.. automodule:: sambuca_core.gui
+.. automodule:: sambuca.gui
    :members:
    :undoc-members:
    :show-inheritance:
@@ -25,35 +25,35 @@ Main Components
 Application Entry Point
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: sambuca_core.gui.main
+.. autofunction:: sambuca.gui.main
 
 Main entry point for launching the GUI application.
 
 Core GUI Classes
 ~~~~~~~~~~~~~~~
 
-.. autoclass:: sambuca_core.gui.MainWindow
+.. autoclass:: sambuca.gui.MainWindow
    :members:
    :undoc-members:
    :show-inheritance:
 
 The main application window containing all GUI components.
 
-.. autoclass:: sambuca_core.gui.ForwardModelPanel
+.. autoclass:: sambuca.gui.ForwardModelPanel
    :members:
    :undoc-members:
    :show-inheritance:
 
 Panel for interactive forward model experimentation.
 
-.. autoclass:: sambuca_core.gui.InversionPanel
+.. autoclass:: sambuca.gui.InversionPanel
    :members:
    :undoc-members:
    :show-inheritance:
 
 Panel for single pixel and batch inversion operations.
 
-.. autoclass:: sambuca_core.gui.SIOPPanel
+.. autoclass:: sambuca.gui.SIOPPanel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -72,7 +72,7 @@ Command Line
    sambuca-gui
 
    # Or using Python module
-   python -m sambuca_core.gui
+   python -m sambuca.gui
 
    # Or from Python script
    python run_gui.py
@@ -82,7 +82,7 @@ From Python
 
 .. code-block:: python
 
-   from sambuca_core.gui import main
+   from sambuca.gui import main
    
    # Launch GUI
    main()
@@ -114,7 +114,7 @@ Forward Model Tab
 .. code-block:: python
 
    # Programmatic access to forward model panel
-   from sambuca_core.gui import ForwardModelPanel
+   from sambuca.gui import ForwardModelPanel
    
    panel = ForwardModelPanel()
    panel.set_parameters(chl=2.0, cdom=0.5, nap=1.5, depth=8.0)
@@ -143,7 +143,7 @@ Inversion Tab
 .. code-block:: python
 
    # Programmatic inversion control
-   from sambuca_core.gui import InversionPanel
+   from sambuca.gui import InversionPanel
    
    panel = InversionPanel()
    panel.load_observed_spectrum([0.012, 0.015, 0.008, 0.006])

@@ -1,167 +1,212 @@
-Examples & Tutorials
-====================
+Examples
+========
 
-This section provides comprehensive examples and tutorials demonstrating SAMBUCA Core's capabilities in real-world applications.
+Practical examples showing how to use SAMBUCA with real data.
 
-.. toctree::
-   :maxdepth: 2
+Basic Bathymetry Processing
+---------------------------
 
-   basic_usage
-   advanced_examples
-   tutorials
+**Simple workflow for bathymetry mapping:**
 
-Getting Started with Examples
+.. code-block:: python
+
+   from sambuca.core.workflows import BathymetryWorkflow
+   from pathlib import Path
+
+   # Setup paths
+   siop_dir = Path("../data/siops")
+   image_path = Path("../data/input/example_groensund.tif")
+   output_dir = Path("../data/output/example_groensund")
+
+   # Create workflow
+   workflow = BathymetryWorkflow(str(siop_dir), sensor='sentinel2')
+
+   # Optional: customize parameters
+   workflow.customize_parameters(
+       depth=(0, 25),
+       fixed_chl=0.5,
+       fixed_nap=0.001,
+       fixed_cdom=0.0025,
+       fixed_substrate_fraction=1,
+   )
+
+   workflow.wavelengths = [492.4, 559.8, 664.6, 704.1]
+   workflow.bands = [2, 3, 4, 5]
+
+   # Process image
+   result = workflow.process_image(
+       image_path=str(image_path),
+       n_processes=4,
+       progress_bar=True
+   )
+
+   # Save results
+   result.print_summary()
+   result.plot_summary(save_path=str(output_dir / "summary.png"))
+   result.save_all_parameters(str(output_dir), formats=['tiff', 'png'])
+
+Fast Processing with Lookup Tables
+----------------------------------
+
+**For repeated processing or large images:**
+
+.. code-block:: python
+
+   from sambuca.core.workflows import BathymetryWorkflow
+   from sambuca.core.inversion import LookUpTable, process_image
+   from pathlib import Path
+
+   # Setup
+   workflow = BathymetryWorkflow("../data/siops", sensor='sentinel2')
+   
+   # Configure for depth-only inversion (fastest)
+   workflow.customize_parameters(
+       depth=(0, 25),
+       fixed_chl=5.6,
+       fixed_nap=0.001,
+       fixed_cdom=0.09,
+       fixed_substrate_fraction=1,
+   )
+
+   # Build LUT
+   lut = LookUpTable(workflow.inversion_params)
+   lut.build_table(
+       grid_size=200,
+       progress_bar=True,
+       use_kdtree=True
+   )
+
+   # Load and process image
+   image_data = workflow.image_loader.load("my_image.tif", bands=[2, 3, 4, 5])
+   
+   results = process_image(
+       image_data.data,
+       workflow.inversion_params,
+       lut=lut,  # Use LUT for speed
+       n_processes=4,
+       progress_bar=True,
+       refinement=False  # Pure LUT lookup
+   )
+
+   print(f"Processing complete. Depth range: {results['depth'].min():.1f} - {results['depth'].max():.1f} m")
+
+Environmental Data Integration
 -----------------------------
 
-The examples are organized from basic to advanced, covering:
+**Using Sentinel-3 water quality data:**
 
-**Basic Usage**
-   Simple forward modeling and inversion examples
+.. code-block:: python
 
-**Advanced Examples**
-   Real satellite data processing, validation studies, and custom applications
+   from sambuca.core.workflows import BathymetryWorkflow
+   from scripts.sambuca_sentinel3_integration import SambucaSentinel3Integration
 
-**Tutorials**
-   Step-by-step guides for specific use cases
+   # Fetch Sentinel-3 environmental data
+   integration = SambucaSentinel3Integration()
+   
+   s3_data = integration.fetch_and_prepare_data(
+       aoi="145.7781,-16.2839,145.8000,-16.2700",  # Great Barrier Reef area
+       date="2024-06-15",
+       parameters=['chl', 'nap', 'cdom']
+   )
 
-Quick Navigation
----------------
+   # Extract values for a specific location
+   point_values = integration.extract_point_values(
+       s3_data, 
+       lon=145.78, 
+       lat=-16.27
+   )
 
-**I want to...**
-
-🎯 **Learn the basics**
-   → :doc:`basic_usage`
-
-🛰️ **Process real satellite data**
-   → :doc:`advanced_examples`
-
-📚 **Follow detailed tutorials**
-   → :doc:`tutorials`
-
-Example Categories
-------------------
-
-Forward Modeling Examples
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- Single spectrum simulation
-- Parameter sensitivity studies
-- Multi-sensor comparisons
-- Custom SIOP development
-
-Inversion Examples
-~~~~~~~~~~~~~~~~~
-
-- Single pixel analysis
-- Image processing workflows
-- Uncertainty quantification
-- Validation against field data
-
-Real Data Applications
-~~~~~~~~~~~~~~~~~~~~~
-
-- Sentinel-2 processing
-- Landsat time series
-- Coral reef mapping
-- Coastal water quality monitoring
-
-All examples include:
-
-✅ **Complete working code**  
-✅ **Sample data** (where possible)  
-✅ **Expected outputs**  
-✅ **Troubleshooting tips**  
-✅ **Extension ideas**
-
-Jupyter Notebooks
------------------
-
-Interactive Jupyter notebooks are available for most examples:
-
-- ``examples/notebooks/01_basic_forward_model.ipynb``
-- ``examples/notebooks/02_single_pixel_inversion.ipynb``
-- ``examples/notebooks/03_image_processing.ipynb``
-- ``examples/notebooks/04_validation_study.ipynb``
-
-To run the notebooks:
-
-.. code-block:: bash
-
-   # Install Jupyter
-   pip install jupyter ipywidgets
-
-   # Start Jupyter server
-   jupyter notebook examples/notebooks/
+   # Use in SAMBUCA workflow
+   workflow = BathymetryWorkflow("data/siops", sensor='sentinel2')
+   
+   # Incorporate S3 values as priors or validation
+   print(f"Sentinel-3 chlorophyll: {point_values['chl']:.2f} mg/m³")
 
 Data Requirements
 ----------------
 
-Examples use a combination of:
+**Input files needed:**
 
-- **Synthetic data** - Generated within the examples
-- **Sample datasets** - Small representative files included
-- **Public data** - Links to download real satellite data
-- **Test data** - Validation datasets with known answers
+1. **Sentinel-2 Level-2A image** - atmospherically corrected reflectance
+2. **SIOP files** - located in `data/siops/` directory
 
-Some examples require downloading additional data. Instructions are provided in each example.
+**File structure:**
+::
 
-Learning Path
--------------
+   data/
+   ├── siops/                    # Spectral optical properties
+   │   ├── a_cdom.txt
+   │   ├── a_nap.txt
+   │   ├── a_ph_star.txt
+   │   └── ...
+   ├── input/
+   │   └── my_sentinel2_image.tif
+   └── output/                   # Results saved here
 
-**Beginner** (New to SAMBUCA)
-   1. :doc:`basic_usage` - Start here for fundamental concepts
-   2. Basic forward modeling examples
-   3. Simple inversion examples
+**Sentinel-2 bands:**
+- B2 (Blue, 490nm)
+- B3 (Green, 560nm)
+- B4 (Red, 665nm)
+- B8A (NIR, 705nm)
 
-**Intermediate** (Familiar with basics)
-   1. :doc:`advanced_examples` - Real data processing
-   2. Validation and uncertainty analysis
-   3. Custom sensor configurations
+Common Patterns
+--------------
 
-**Advanced** (Research/Development)
-   1. :doc:`tutorials` - Detailed case studies
-   2. Algorithm modifications
-   3. Integration with other tools
-
-Contributing Examples
---------------------
-
-We welcome contributed examples! To add your example:
-
-1. **Create a new example** following the template
-2. **Include complete documentation** with explanations
-3. **Test thoroughly** on different systems
-4. **Submit a pull request** with your contribution
-
-Example Template:
+**Standard Sentinel-2 processing:**
 
 .. code-block:: python
 
-   """
-   Example Title: Brief description
-   
-   This example demonstrates [main concept].
-   
-   Requirements:
-   - sambuca_core
-   - additional packages if needed
-   
-   Data:
-   - Source and download instructions
-   
-   Expected output:
-   - Description of results
-   """
-   
-   # Your example code here
+   workflow = BathymetryWorkflow("data/siops", sensor='sentinel2')
+   workflow.wavelengths = [492.4, 559.8, 664.6, 704.1]
+   workflow.bands = [2, 3, 4, 5]  # B2, B3, B4, B8A
 
-Support and Discussion
----------------------
+**Depth-only mapping (fastest):**
 
-Need help with examples?
+.. code-block:: python
 
-💬 **GitHub Discussions**: Community Q&A and examples sharing  
-🐛 **GitHub Issues**: Report bugs in examples  
-📧 **Contact**: Direct questions to the development team
+   workflow.customize_parameters(
+       depth=(0, 25),           # Only estimate depth
+       fixed_chl=1.0,           # Fix other parameters
+       fixed_nap=0.5,
+       fixed_cdom=0.1
+   )
 
-Ready to start? Begin with :doc:`basic_usage` for fundamental examples, or jump to :doc:`advanced_examples` for real-world applications.
+**Full water quality mapping:**
+
+.. code-block:: python
+
+   workflow.customize_parameters(
+       depth=(0, 25),
+       chl=(0.1, 10.0),         # Estimate all parameters
+       nap=(0.1, 5.0),
+       cdom=(0.01, 2.0)
+   )
+
+Tips for Success
+---------------
+
+- **Use Level-2A data** - atmospherically corrected Sentinel-2 only
+- **Shallow water only** - SAMBUCA works best in < 25m depth
+- **Clear water preferred** - turbid water reduces accuracy
+- **Build LUTs once** - reuse for multiple images
+- **Start simple** - fix most parameters, estimate depth only
+- **Validate results** - compare with field measurements when possible
+
+Troubleshooting
+--------------
+
+**Common issues:**
+
+- **All NaN results**: Check image format and band order
+- **Unrealistic depths**: Adjust depth range in parameters
+- **Slow processing**: Use lookup tables or reduce image size
+- **Poor accuracy**: Validate SIOP data for your study area
+
+**Performance tips:**
+
+- Use `n_processes=4` or match your CPU cores
+- Build LUTs for repeated processing
+- Process image tiles for very large files
+- Use `refinement=False` with LUTs for maximum speed
+
+See the `examples/` directory for complete working scripts.

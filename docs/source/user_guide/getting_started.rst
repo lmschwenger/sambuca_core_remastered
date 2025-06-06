@@ -75,7 +75,7 @@ First, verify your installation is working:
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    print(f"SAMBUCA Core v{sbc.__version__} ready!")
 
 If this works, you're ready to proceed. If not, see :doc:`../installation`.
@@ -90,7 +90,7 @@ Step 1: Import and Setup
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    import numpy as np
    import matplotlib.pyplot as plt
 
@@ -363,7 +363,7 @@ Run Inversion
 
 .. code-block:: python
 
-   from sambuca_core.inversion import InversionParameters, invert_spectrum
+   from sambuca.core.inversion import InversionParameters, invert_spectrum
    
    # Set up inversion parameters
    params = InversionParameters(

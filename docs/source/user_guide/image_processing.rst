@@ -43,7 +43,7 @@ Simple Example with Synthetic Data
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    from sambuca_core.inversion import InversionParameters, process_image
    import numpy as np
    import matplotlib.pyplot as plt

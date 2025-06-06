@@ -52,7 +52,7 @@ Single Pixel Inversion
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    from sambuca_core.inversion import InversionParameters, invert_spectrum
    import numpy as np
 

@@ -1,7 +1,7 @@
 SIOP Manager
 ============
 
-.. automodule:: sambuca_core.siop_manager
+.. automodule:: sambuca.core.siop_manager
    :members:
    :undoc-members:
    :show-inheritance:
@@ -11,7 +11,7 @@ The SIOP Manager handles Spectral Inherent Optical Properties (SIOPs) for differ
 SIOPManager Class
 -----------------
 
-.. autoclass:: sambuca_core.SIOPManager
+.. autoclass:: sambuca.core.SIOPManager
    :members:
    :undoc-members:
    :show-inheritance:
@@ -106,34 +106,34 @@ Methods Reference
 Initialization Methods
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. automethod:: sambuca_core.SIOPManager.__init__
+.. automethod:: sambuca.core.SIOPManager.__init__
    :noindex:
 
-.. automethod:: sambuca_core.SIOPManager.load_libraries
+.. automethod:: sambuca.core.SIOPManager.load_libraries
    :noindex:
 
 Sensor Management
 ~~~~~~~~~~~~~~~~~
 
-.. automethod:: sambuca_core.SIOPManager.register_sensor
+.. automethod:: sambuca.core.SIOPManager.register_sensor
    :noindex:
 
-.. automethod:: sambuca_core.SIOPManager.get_siops_for_sensor
+.. automethod:: sambuca.core.SIOPManager.get_siops_for_sensor
    :noindex:
 
-.. automethod:: sambuca_core.SIOPManager.get_siops_for_wavelengths
+.. automethod:: sambuca.core.SIOPManager.get_siops_for_wavelengths
    :noindex:
 
 Library Access
 ~~~~~~~~~~~~~~
 
-.. automethod:: sambuca_core.SIOPManager.list_available_libraries
+.. automethod:: sambuca.core.SIOPManager.list_available_libraries
    :noindex:
 
-.. automethod:: sambuca_core.SIOPManager.get_common_library_types
+.. automethod:: sambuca.core.SIOPManager.get_common_library_types
    :noindex:
 
-.. automethod:: sambuca_core.SIOPManager.get_standard_siops
+.. automethod:: sambuca.core.SIOPManager.get_standard_siops
    :noindex:
 
 Usage Examples
@@ -144,7 +144,7 @@ Basic Setup
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    
    # Initialize SIOP manager
    siop_manager = sbc.SIOPManager("data/spectral_libraries/")
@@ -413,7 +413,7 @@ With Inversion Workflow
 
 .. code-block:: python
 
-   from sambuca_core.inversion import InversionParameters, invert_spectrum
+   from sambuca.core.inversion import InversionParameters, invert_spectrum
    
    # Setup SIOPs
    siop_manager = sbc.SIOPManager("data/")

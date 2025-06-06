@@ -1,7 +1,7 @@
 Forward Model
 =============
 
-.. automodule:: sambuca_core.forward_model
+.. automodule:: sambuca.core.forward_model
    :members:
    :undoc-members:
    :show-inheritance:
@@ -11,7 +11,7 @@ The forward model module implements the semi-analytical Lee/Sambuca radiative tr
 Forward Model Function
 ----------------------
 
-.. autofunction:: sambuca_core.forward_model
+.. autofunction:: sambuca.core.forward_model
    :noindex:
 
 The forward model is the core computational engine of SAMBUCA. It simulates the spectral reflectance that a satellite sensor would observe given specific water column and bottom properties.
@@ -40,7 +40,7 @@ Where:
 Results Class
 -------------
 
-.. autoclass:: sambuca_core.ForwardModelResults
+.. autoclass:: sambuca.core.ForwardModelResults
    :members:
    :undoc-members:
    :show-inheritance:
@@ -166,7 +166,7 @@ Basic Usage
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
    import numpy as np
    
    # Define basic spectral properties

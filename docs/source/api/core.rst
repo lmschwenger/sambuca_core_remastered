@@ -1,7 +1,7 @@
-Core Module (sambuca_core)
+Core Module (sambuca.core)
 ===========================
 
-.. automodule:: sambuca_core
+.. automodule:: sambuca.core
    :members:
    :undoc-members:
    :show-inheritance:
@@ -11,19 +11,19 @@ The core module provides the main entry point and essential functionality for SA
 Main Functions
 --------------
 
-.. autofunction:: sambuca_core.forward_model
+.. autofunction:: sambuca.core.forward_model
 
-.. autofunction:: sambuca_core.list_data_fetchers
+.. autofunction:: sambuca.core.list_data_fetchers
 
 Core Classes
 ------------
 
-.. autoclass:: sambuca_core.SIOPManager
+.. autoclass:: sambuca.core.SIOPManager
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: sambuca_core.ForwardModelResults
+.. autoclass:: sambuca.core.ForwardModelResults
    :members:
    :undoc-members:
    :show-inheritance:
@@ -31,32 +31,32 @@ Core Classes
 Exceptions
 ----------
 
-.. autoexception:: sambuca_core.SambucaException
+.. autoexception:: sambuca.core.SambucaException
    :members:
    :show-inheritance:
 
-.. autoexception:: sambuca_core.UnsupportedDataFormatError
+.. autoexception:: sambuca.core.UnsupportedDataFormatError
    :members:
    :show-inheritance:
 
-.. autoexception:: sambuca_core.DataValidationError
+.. autoexception:: sambuca.core.DataValidationError
    :members:
    :show-inheritance:
 
-.. autoexception:: sambuca_core.DataFetchError
+.. autoexception:: sambuca.core.DataFetchError
    :members:
    :show-inheritance:
 
-.. autoexception:: sambuca_core.MissingDependencyError
+.. autoexception:: sambuca.core.MissingDependencyError
    :members:
    :show-inheritance:
 
 Utility Functions
 -----------------
 
-.. autofunction:: sambuca_core.strictly_decreasing
+.. autofunction:: sambuca.core.strictly_decreasing
 
-.. autofunction:: sambuca_core.strictly_increasing
+.. autofunction:: sambuca.core.strictly_increasing
 
 Type Definitions
 ----------------
@@ -76,7 +76,7 @@ The module defines several type aliases for documentation and type hints:
 Constants
 ---------
 
-.. autodata:: sambuca_core.__version__
+.. autodata:: sambuca.core.__version__
    :annotation: = "0.1.0"
 
    Current version of SAMBUCA Core

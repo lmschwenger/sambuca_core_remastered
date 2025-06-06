@@ -205,7 +205,7 @@ Algorithm Selection
 
 .. code-block:: python
 
-   from sambuca_core.inversion import InversionParameters
+   from sambuca.core.inversion import InversionParameters
    
    # Different optimization algorithms and their characteristics
    optimization_methods = {
@@ -934,7 +934,7 @@ Performance Benchmarking
                        setattr(params, key, value)
                
                # Process small test image
-               from sambuca_core.inversion import process_image
+               from sambuca.core.inversion import process_image
                
                test_results = process_image(
                    test_image,

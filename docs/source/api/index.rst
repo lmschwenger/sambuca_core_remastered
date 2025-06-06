@@ -42,21 +42,21 @@ Essential Classes and Functions
 **Core Functions:**
 
 .. autosummary::
-   sambuca_core.forward_model
-   sambuca_core.SIOPManager
-   sambuca_core.list_data_fetchers
+   sambuca.core.forward_model
+   sambuca.core.SIOPManager
+   sambuca.core.list_data_fetchers
 
 **Results Classes:**
 
 .. autosummary::
-   sambuca_core.ForwardModelResults
+   sambuca.core.ForwardModelResults
 
 **Exception Classes:**
 
 .. autosummary::
-   sambuca_core.SambucaException
-   sambuca_core.UnsupportedDataFormatError
-   sambuca_core.DataValidationError
+   sambuca.core.SambucaException
+   sambuca.core.UnsupportedDataFormatError
+   sambuca.core.DataValidationError
 
 Import Patterns
 ~~~~~~~~~~~~~~~
@@ -66,19 +66,19 @@ The recommended import patterns for SAMBUCA Core:
 .. code-block:: python
 
    # Standard import
-   import sambuca_core as sbc
+   import sambuca.core as sbc
 
    # Core functionality
-   from sambuca_core import forward_model, SIOPManager, ForwardModelResults
+   from sambuca.core import forward_model, SIOPManager, ForwardModelResults
 
    # Inversion functionality  
-   from sambuca_core.inversion import InversionParameters, invert_spectrum, process_image
+   from sambuca.core.inversion import InversionParameters, invert_spectrum, process_image
 
    # Exceptions
-   from sambuca_core import SambucaException, DataValidationError
+   from sambuca.core import SambucaException, DataValidationError
 
    # GUI (if installed)
-   from sambuca_core.gui import launch_gui
+   from sambuca.gui import launch_gui
 
 Complete API Documentation
 --------------------------

@@ -133,7 +133,7 @@ Examples by Use Case
 .. code-block:: python
 
    # Estimate chlorophyll from Sentinel-2 pixel
-   from sambuca_core.inversion import InversionParameters, invert_spectrum
+   from sambuca.core.inversion import InversionParameters, invert_spectrum
    
    observed_rrs = [0.012, 0.015, 0.008, 0.006]  # Sentinel-2 reflectance
    

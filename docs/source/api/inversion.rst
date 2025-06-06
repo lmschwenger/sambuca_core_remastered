@@ -1,7 +1,7 @@
 Inversion Module
 ================
 
-.. automodule:: sambuca_core.inversion
+.. automodule:: sambuca.core.inversion
    :members:
    :undoc-members:
    :show-inheritance:
@@ -14,7 +14,7 @@ Core Classes and Functions
 InversionParameters Class
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: sambuca_core.inversion.InversionParameters
+.. autoclass:: sambuca.core.inversion.InversionParameters
    :members:
    :undoc-members:
    :show-inheritance:
@@ -41,16 +41,16 @@ The :class:`InversionParameters` class configures the inversion process, includi
 Inversion Functions
 ~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: sambuca_core.inversion.invert_spectrum
+.. autofunction:: sambuca.core.inversion.invert_spectrum
 
-.. autofunction:: sambuca_core.inversion.process_image
+.. autofunction:: sambuca.core.inversion.process_image
 
 Primary inversion functions for single spectra and full images.
 
 Result Classes
 ~~~~~~~~~~~~~~
 
-.. autoclass:: sambuca_core.inversion.InversionResult
+.. autoclass:: sambuca.core.inversion.InversionResult
    :members:
    :undoc-members:
    :show-inheritance:
@@ -65,7 +65,7 @@ Basic Single Pixel Inversion
 
 .. code-block:: python
 
-   from sambuca_core.inversion import InversionParameters, invert_spectrum
+   from sambuca.core.inversion import InversionParameters, invert_spectrum
    import numpy as np
 
    # Observed reflectance spectrum
@@ -98,7 +98,7 @@ Image Processing
 
 .. code-block:: python
 
-   from sambuca_core.inversion import process_image
+   from sambuca.core.inversion import process_image
    import numpy as np
 
    # Image array (height, width, bands)
@@ -151,7 +151,7 @@ Integration with SIOP Manager
 
 .. code-block:: python
 
-   import sambuca_core as sbc
+   import sambuca.core as sbc
 
    # Set up SIOP manager
    siop_manager = sbc.SIOPManager("data/")
