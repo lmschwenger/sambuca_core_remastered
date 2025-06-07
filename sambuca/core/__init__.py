@@ -17,11 +17,6 @@ from .forward_model import forward_model, ForwardModelResults
 
 from .siop_manager import SIOPManager
 
-from .utility import (
-    strictly_decreasing,
-    strictly_increasing,
-)
-
 # Optional imports with graceful degradation
 try:
     from .data_fetchers import DataFetcherFactory
