@@ -21,3 +21,15 @@ class DataValidationError(SambucaException):
     """The data file failed validation."""
 
     pass
+
+
+class DataFetchError(SambucaException):
+    """Error occurred while fetching external data."""
+
+    pass
+
+
+class MissingDependencyError(SambucaException):
+    """Required optional dependency is not installed."""
+
+    pass

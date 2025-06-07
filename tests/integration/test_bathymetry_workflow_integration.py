@@ -136,7 +136,7 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
             self.assertEqual(len(image_data.shape), 3)  # Should be 3D
             self.assertTrue(image_data.is_bands_last)  # Should be bands-last format
 
-            print("✓ Workflow image loading test passed")
+            print(" Workflow image loading test passed")
 
         except Exception as e:
             self.skipTest(f"Image processing test failed: {e}")
@@ -185,7 +185,7 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
             self.assertGreater(error, 0)
             self.assertLess(error, 1.0)  # Should be reasonable RMSE
 
-            print(f"✓ Pixel analysis successful at ({test_y}, {test_x})")
+            print(f" Pixel analysis successful at ({test_y}, {test_x})")
 
         except Exception as e:
             # Don't fail the test if pixel processing has issues
@@ -214,7 +214,7 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
             self.assertTrue(np.all(rgb >= 0))  # Values should be non-negative
             self.assertTrue(np.all(rgb <= 1))  # Values should be normalized
 
-            print("✓ RGB preview generation test passed")
+            print(" RGB preview generation test passed")
 
         except Exception as e:
             self.skipTest(f"RGB preview test failed: {e}")

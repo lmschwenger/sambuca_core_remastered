@@ -172,7 +172,7 @@ class TestInversionIntegration(unittest.TestCase):
                     self.assertLess(relative_error, 0.3,
                                     f"Depth estimation error too large: {relative_error:.3f}")
 
-                    print(f"✓ {scenario_name}: depth {true_depth:.1f}m → {estimated_depth:.1f}m "
+                    print(f" {scenario_name}: depth {true_depth:.1f}m → {estimated_depth:.1f}m "
                           f"(error: {relative_error:.1%})")
 
                 except Exception as e:
@@ -206,7 +206,7 @@ class TestInversionIntegration(unittest.TestCase):
                     self.assertLess(depth_error, 0.5, "Depth error too large in multi-param inversion")
                     self.assertLess(chl_error, 0.5, "Chlorophyll error too large in multi-param inversion")
 
-                    print(f"✓ {scenario_name}: depth {depth_error:.1%}, chl {chl_error:.1%} error")
+                    print(f" {scenario_name}: depth {depth_error:.1%}, chl {chl_error:.1%} error")
 
                 except Exception as e:
                     print(f"⚠️ {scenario_name} multi-parameter inversion failed: {e}")
@@ -242,7 +242,7 @@ class TestInversionIntegration(unittest.TestCase):
                                  single_result.objective_value * 1.1,
                                  "Multi-start should not perform significantly worse")
 
-            print(f"✓ Multi-start vs single: {multi_result.objective_value:.6f} vs "
+            print(f" Multi-start vs single: {multi_result.objective_value:.6f} vs "
                   f"{single_result.objective_value:.6f}")
 
         except Exception as e:
@@ -290,7 +290,7 @@ class TestInversionIntegration(unittest.TestCase):
             self.assertIsInstance(nedr_error, float)
             self.assertGreater(nedr_error, 0)
 
-            print(f"✓ Objective functions: RMSE={rmse_error:.6f}, SAM={sam_error:.6f}, "
+            print(f" Objective functions: RMSE={rmse_error:.6f}, SAM={sam_error:.6f}, "
                   f"NEDR-RMSE={nedr_error:.6f}")
 
         except Exception as e:
@@ -329,7 +329,7 @@ class TestInversionIntegration(unittest.TestCase):
                     self.assertLess(depth_error, 0.5,
                                     f"Error too large with noise {noise_level}: {depth_error:.3f}")
 
-                    print(f"✓ Noise {noise_level}: depth error {depth_error:.1%}")
+                    print(f" Noise {noise_level}: depth error {depth_error:.1%}")
 
                 except Exception as e:
                     print(f"⚠️ Noise level {noise_level} test failed: {e}")
@@ -359,7 +359,7 @@ class TestInversionIntegration(unittest.TestCase):
                 self.assertLessEqual(value, upper + 1e-10,
                                      f"{param_name} above upper bound: {value} > {upper}")
 
-            print("✓ Parameter bounds validation passed")
+            print(" Parameter bounds validation passed")
 
         except Exception as e:
             self.skipTest(f"Bounds validation test failed: {e}")
@@ -413,7 +413,7 @@ class TestInversionIntegration(unittest.TestCase):
             self.assertTrue(np.all(valid_depths >= 0))
             self.assertTrue(np.all(valid_depths <= 20))
 
-            print(f"✓ Batch processing: {len(valid_depths)}/{height * width} valid pixels")
+            print(f" Batch processing: {len(valid_depths)}/{height * width} valid pixels")
 
         except Exception as e:
             self.skipTest(f"Batch processing test failed: {e}")
@@ -451,7 +451,7 @@ class TestInversionIntegration(unittest.TestCase):
                 mean_error = np.mean(convergence_stats['errors'])
                 self.assertLess(mean_error, 0.1, "Mean error should be reasonable")
 
-            print(f"✓ Convergence analysis: {success_rate:.1%} success rate, "
+            print(f" Convergence analysis: {success_rate:.1%} success rate, "
                   f"mean error: {np.mean(convergence_stats['errors']):.6f}")
 
 
