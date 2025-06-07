@@ -3,7 +3,7 @@ name: PR Validation
 # This workflow runs on all pull requests and must pass before merging
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master, dev ]
 
 # Cancel previous runs if a new commit is pushed
 concurrency:
