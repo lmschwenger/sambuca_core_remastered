@@ -257,7 +257,7 @@ class TestImageInversionResultFileIO:
         
         output_path = Path(self.temp_dir) / "depth.tif"
         
-        self.result.save_depth_map(str(output_path), format='tiff')
+        self.result.save_depth_map(str(output_path), fmt='tiff')
         
         # Verify rasterio.open was called with correct parameters
         mock_rasterio_open.assert_called_once()
@@ -278,7 +278,7 @@ class TestImageInversionResultFileIO:
         
         output_path = Path(self.temp_dir) / "depth.png"
         
-        self.result.save_depth_map(str(output_path), format='png')
+        self.result.save_depth_map(str(output_path), fmt='png')
         
         mock_visualizer.plot_parameter.assert_called_once_with('depth', show_colorbar=True)
         mock_fig.savefig.assert_called_once_with(output_path, dpi=300, bbox_inches='tight')
@@ -299,7 +299,7 @@ class TestImageInversionResultFileIO:
         output_path = Path(self.temp_dir) / "depth.xyz"
         
         with pytest.raises(ValueError, match="Unsupported format"):
-            self.result.save_depth_map(str(output_path), format='xyz')
+            self.result.save_depth_map(str(output_path), fmt='xyz')
 
     @patch('rasterio.open')
     @patch('sambuca.core.results.visualization.ResultVisualizer')

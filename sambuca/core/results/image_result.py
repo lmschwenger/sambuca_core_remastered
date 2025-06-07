@@ -1,8 +1,9 @@
-from typing import Dict, Any, List, Optional, Tuple
-import numpy as np
 from pathlib import Path
+from typing import Dict, Any, List, Optional, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
 import rasterio
-from rasterio.enums import Resampling
 from skimage.draw import line
 
 
@@ -143,7 +144,7 @@ class ImageInversionResult:
     def plot_summary(self,
                      figsize: Tuple[int, int] = (15, 10),
                      save_path: Optional[str] = None,
-                     dpi: int = 300) -> 'matplotlib.figure.Figure':
+                     dpi: int = 300) -> 'plt.Figure':
         """
         Create comprehensive summary plot.
 
@@ -155,8 +156,6 @@ class ImageInversionResult:
         Returns:
             matplotlib Figure object
         """
-        import matplotlib.pyplot as plt
-        import matplotlib.gridspec as gridspec
         from .visualization import ResultVisualizer
 
         visualizer = ResultVisualizer(self)
@@ -172,7 +171,7 @@ class ImageInversionResult:
                        param_name: str,
                        figsize: Tuple[int, int] = (10, 8),
                        colormap: str = 'auto',
-                       **kwargs) -> 'matplotlib.figure.Figure':
+                       **kwargs) -> 'plt.Figure':
         """
         Plot individual parameter map.
 
@@ -185,38 +184,37 @@ class ImageInversionResult:
         Returns:
             matplotlib Figure object
         """
-        import matplotlib.pyplot as plt
         from .visualization import ResultVisualizer
 
         visualizer = ResultVisualizer(self)
         return visualizer.plot_parameter(param_name, figsize=figsize,
                                          colormap=colormap, **kwargs)
 
-    def save_depth_map(self, output_path: str, format: str = 'tiff'):
+    def save_depth_map(self, output_path: str, fmt: str = 'tiff'):
         """
         Save depth map as GeoTIFF.
 
         Args:
             output_path: Output file path
-            format: Output format ('tiff' or 'png')
+            fmt: Output format ('tiff' or 'png')
         """
         if 'depth' not in self.results:
             raise ValueError("No depth data available to save")
 
         output_path = Path(output_path)
 
-        if format.lower() == 'tiff':
+        if fmt.lower() == 'tiff':
             self._save_as_geotiff(output_path, 'depth')
-        elif format.lower() == 'png':
+        elif fmt.lower() == 'png':
             self._save_as_png(output_path, 'depth')
         else:
-            raise ValueError(f"Unsupported format: {format}")
+            raise ValueError(f"Unsupported format: {fmt}")
 
         print(f"Depth map saved to: {output_path}")
 
     def save_all_parameters(self,
                             output_dir: str,
-                            formats: List[str] = ['tiff'],
+                            formats: tuple[str] = ('tiff'),
                             prefix: str = 'sambuca') -> Dict[str, str]:
         """
         Save all parameter maps to files.
