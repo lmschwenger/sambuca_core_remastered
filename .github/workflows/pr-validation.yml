@@ -48,7 +48,7 @@ jobs:
     
     - name: Check test coverage
       run: |
-        python -m pytest tests/unit/ --cov=sambuca --cov-report=term-missing --cov-fail-under=60
+        python -m pytest tests/unit/ --cov=sambuca.core --cov-report=term-missing --cov-fail-under=60
         echo "✅ Test coverage meets minimum requirements!"
 
   syntax-check:
