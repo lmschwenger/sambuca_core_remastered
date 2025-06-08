@@ -5,19 +5,18 @@ to derive water properties using the Sambuca inversion process, with
 optimizations for performance especially on Windows systems.
 """
 
-import os
-import multiprocessing as mp
-from functools import partial
-from typing import Dict, List, Tuple, Optional, Any, Union, Callable
 import concurrent.futures
+import os
+import time
+from typing import Dict, Tuple, Optional, Any
+
 import numpy as np
 from numpy.typing import NDArray
 from tqdm import tqdm
-import time
 
+from .lut import LookUpTable
 from .optimization import invert_spectrum, multi_start_inversion
 from .parameters import InversionParameters
-from .lut import LookUpTable
 
 
 def process_pixel(
@@ -296,7 +295,7 @@ def process_image(
         valid_depths = output['depth'][valid_mask]
         if len(valid_depths) > 0:
             print(f"Depth statistics:")
-            print(f"  Valid pixels: {len(valid_depths)} of {n_pixels} ({len(valid_depths)/n_pixels*100:.1f}%)")
+            print(f"  Valid pixels: {len(valid_depths)} of {n_pixels} ({len(valid_depths) / n_pixels * 100:.1f}%)")
             print(f"  Min depth: {np.min(valid_depths):.2f} m")
             print(f"  Max depth: {np.max(valid_depths):.2f} m")
             print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
@@ -449,7 +448,7 @@ def batch_process_image(
                 if valid_pixels > 0:
                     valid_depths = output['depth'][valid_mask]
                     print(f"Progress after {batch_count}/{total_batches} batches:")
-                    print(f"  Valid pixels: {valid_pixels} ({valid_pixels/(height*width)*100:.1f}%)")
+                    print(f"  Valid pixels: {valid_pixels} ({valid_pixels / (height * width) * 100:.1f}%)")
                     print(f"  Depth range: {np.min(valid_depths):.2f} - {np.max(valid_depths):.2f} m")
                     print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
 
@@ -473,7 +472,8 @@ def batch_process_image(
             valid_depths = output['depth'][valid_mask]
             if len(valid_depths) > 0:
                 print("\nFinal depth statistics:")
-                print(f"  Valid pixels: {np.sum(valid_mask)} of {height*width} ({np.sum(valid_mask)/(height*width)*100:.1f}%)")
+                print(
+                    f"  Valid pixels: {np.sum(valid_mask)} of {height * width} ({np.sum(valid_mask) / (height * width) * 100:.1f}%)")
                 print(f"  Min depth: {np.min(valid_depths):.2f} m")
                 print(f"  Max depth: {np.max(valid_depths):.2f} m")
                 print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
