@@ -10,20 +10,20 @@ exclude =
     dist,
     .pytest_cache
 ignore = 
-    E501,  # line too long (handled by max-line-length)
-    W503,  # line break before binary operator
-    E722,  # do not use bare 'except' (allow for legacy code)
-    F401,  # imported but unused (allow for __init__.py files)
-    E402,  # module level import not at top (allow for conditional imports)
-    W293,  # blank line contains whitespace
-    W291,  # trailing whitespace
-    W292,  # no newline at end of file
-    F841,  # local variable assigned but never used (common in scientific code)
-    F541,  # f-string is missing placeholders (allow for consistency)
-    E302,  # expected 2 blank lines, found 1
-    E261,  # at least two spaces before inline comment
-    E128,  # continuation line under-indented for visual indent
-    E226,  # missing whitespace around arithmetic operator
+    E501,
+    W503,
+    E722,
+    F401,
+    E402,
+    W293,
+    W291,
+    W292,
+    F841,
+    F541,
+    E302,
+    E261,
+    E128,
+    E226,
 per-file-ignores =
     __init__.py:F401
     tests/*:F841,E501
