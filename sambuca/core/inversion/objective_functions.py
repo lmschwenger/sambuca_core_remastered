@@ -58,6 +58,9 @@ def spectral_rmse(
     return error
 
 
+
+
+
 def spectral_angle_mapper(
         params: List[float],
         observed_rrs: NDArray[np.float64],

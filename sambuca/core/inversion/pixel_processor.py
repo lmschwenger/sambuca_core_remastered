@@ -64,7 +64,6 @@ def process_pixel(
             # If using multi-start refinement after LUT
             if refinement and use_multi_start:
                 # Use LUT result as one of the starting points
-                lut_params = [lut_result['parameters'][p] for p in inversion_parameters.get_inversion_parameter_names()]
                 result = multi_start_inversion(
                     pixel_spectra,
                     inversion_parameters,
@@ -82,7 +81,7 @@ def process_pixel(
             else:
                 return lut_result
 
-        except Exception as e:
+        except Exception:
             # Fall back to optimization if LUT fails
             pass
 
@@ -119,6 +118,7 @@ def process_pixel(
             'status': 'multi_start_failed' if use_multi_start else 'optimization_failed',
             'error_message': str(e),
         }
+
 
 # Function to process a batch of pixels (used by both ThreadPoolExecutor and ProcessPoolExecutor)
 def _process_pixel_batch(batch_data):
@@ -224,7 +224,6 @@ def process_image(
     param_names = inversion_parameters.get_inversion_parameter_names()
 
     # Prepare pixel batches for parallel processing
-    pixel_indices = list(range(n_pixels))
     pixel_coords = list(zip(y_indices, x_indices))
 
     # Create batches of pixels for processing
@@ -406,7 +405,7 @@ def batch_process_image(
             batch_iterator = tqdm(
                 [(y, x) for y in y_starts for x in x_starts],
                 total=total_batches,
-                desc=f"Processing {total_batches} image batches"
+                desc="Processing {} image batches".format(total_batches)
             )
         else:
             batch_iterator = [(y, x) for y in y_starts for x in x_starts]

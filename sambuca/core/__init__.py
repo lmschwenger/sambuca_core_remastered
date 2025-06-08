@@ -38,7 +38,7 @@ def list_data_fetchers() -> Dict[str, dict]:
     """List available data fetchers and their status."""
     if not _DATA_FETCHERS_AVAILABLE:
         return {"error": "Data fetchers module not available"}
-    
+
     return DataFetcherFactory.get_fetcher_info()
 
 
@@ -51,7 +51,7 @@ def main():
     print("  sambuca-gui    - Launch the GUI application")
     print("  python -m sambuca.core - Show this help")
     print("")
-    
+
     # Show data fetcher status
     if _DATA_FETCHERS_AVAILABLE:
         print("Available Data Fetchers:")
@@ -64,7 +64,7 @@ def main():
                 print(f"    Missing: {deps}")
     else:
         print("Data fetchers not available (optional dependencies not installed)")
-    
+
     print("")
     print("For more information, see the documentation and examples.")
 
