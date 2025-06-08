@@ -6,6 +6,7 @@ omit =
     sambuca/core/__main__.py
     */tests/*
     */test_*
+    */__init__.py
 
 [report]
 exclude_lines =
