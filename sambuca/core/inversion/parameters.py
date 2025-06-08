@@ -159,7 +159,7 @@ class InversionParameters:
             Dictionary of parameters for the forward model.
         """
         # Ensure the wavelengths list is properly set
-        if self.wavelengths is None or self.wavelengths == []:
+        if self.wavelengths is None or len(self.wavelengths) == 0:
             raise ValueError("Wavelengths must be specified for inversion")
 
         # Start with default fixed parameters

@@ -50,6 +50,7 @@ class TestLookUpTableIntegration(unittest.TestCase):
         self.params = InversionParameters(
             chl=(0.5, 3.0),
             depth=(1.0, 10.0),
+            fixed_substrate_fraction=1.0,
             fixed_cdom=0.1,
             fixed_nap=0.5,
             wavelengths=[450, 550, 650]

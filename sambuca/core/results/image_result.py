@@ -214,7 +214,7 @@ class ImageInversionResult:
 
     def save_all_parameters(self,
                             output_dir: str,
-                            formats: tuple[str] = ('tiff'),
+                            formats: Optional[list[str]] = None,
                             prefix: str = 'sambuca') -> Dict[str, str]:
         """
         Save all parameter maps to files.
@@ -229,11 +229,13 @@ class ImageInversionResult:
         """
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
+        if formats is None:
+            formats = ['tiff']
 
         saved_files = {}
-
+        filepath = None
         for param_name in self.get_parameter_names():
-            for fmt in formats:
+            for fmt in list(formats):
                 if fmt.lower() == 'tiff':
                     filename = f"{prefix}_{param_name}.tif"
                     filepath = output_dir / filename
@@ -242,8 +244,8 @@ class ImageInversionResult:
                     filename = f"{prefix}_{param_name}.png"
                     filepath = output_dir / filename
                     self._save_as_png(filepath, param_name)
-
-                saved_files[f"{param_name}_{fmt}"] = str(filepath)
+                if filepath:
+                    saved_files[f"{param_name}_{fmt}"] = str(filepath)
 
         print(f"Saved {len(saved_files)} files to: {output_dir}")
         return saved_files
