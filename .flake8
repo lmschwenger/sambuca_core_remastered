@@ -10,11 +10,11 @@ exclude =
     dist,
     .pytest_cache
 ignore = 
-    E501,  # line too long (handled by max-line-length)
-    W503,  # line break before binary operator
-    E722,  # do not use bare 'except' (allow for legacy code)
-    F401,  # imported but unused (allow for __init__.py files)
-    E402,  # module level import not at top (allow for conditional imports)
+    E501,
+    W503,
+    E722,
+    F401,
+    E402,
 per-file-ignores =
     __init__.py:F401
     tests/*:F841,E501
