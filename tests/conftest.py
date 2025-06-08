@@ -2,14 +2,12 @@
 
 import sys
 from pathlib import Path
+import pytest
+import numpy as np
 
 # Add the project root to Python path so we can import sambuca modules
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-
-# Import pytest and configure it
-import pytest
-import numpy as np
 
 # Configure numpy error handling for tests
 np.seterr(all='warn')

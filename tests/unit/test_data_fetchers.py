@@ -133,7 +133,7 @@ class TestDataFetcherErrorHandling:
 
             def is_available(self):
                 try:
-                    import nonexistent_package
+                    __import__('nonexistent_package')
                     return True
                 except ImportError:
                     return False

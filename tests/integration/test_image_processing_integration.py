@@ -307,7 +307,7 @@ class TestImageProcessingIntegration(unittest.TestCase):
                     if size > largest_size:
                         largest_size = size
                         largest_image = image_path
-            except:
+            except Exception:
                 continue
 
         if not largest_image:
