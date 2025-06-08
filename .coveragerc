@@ -1,0 +1,17 @@
+[run]
+source = sambuca
+omit = 
+    sambuca/gui/*
+    sambuca/core/data_fetchers/sentinel3.py
+    sambuca/core/__main__.py
+    */tests/*
+    */test_*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
