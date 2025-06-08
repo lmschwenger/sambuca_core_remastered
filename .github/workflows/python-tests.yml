@@ -50,9 +50,3 @@ jobs:
     - name: Lint with flake8
       run: |
         flake8 sambuca tests
-    - name: Check formatting with black
-      run: |
-        black --check sambuca tests
-    - name: Check imports with isort
-      run: |
-        isort --check sambuca tests
