@@ -4,8 +4,9 @@
 Semi-Analytical Model for Bathymetry, Un-mixing, and Concentration Assessment
 """
 
-from setuptools import setup, find_packages
 from pathlib import Path
+
+from setuptools import setup, find_packages
 
 # Read README for long description
 readme_path = Path(__file__).parent / "README.md"

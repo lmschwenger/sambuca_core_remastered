@@ -1,16 +1,15 @@
 """Integration tests for workflow functionality."""
 
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 import pytest
 
 from sambuca.core.workflows import BathymetryWorkflow
-from sambuca.core.results import ImageInversionResult
 
 
 class TestBathymetryWorkflowIntegration(unittest.TestCase):

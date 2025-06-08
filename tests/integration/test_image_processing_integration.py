@@ -1,18 +1,18 @@
 """Integration tests for image processing functionality."""
 
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 import pytest
 import rasterio
 
-from sambuca.core.io import RasterImageLoader, ImagePreprocessor
-from sambuca.core.inversion import InversionParameters, process_image
 from sambuca.core import SIOPManager
+from sambuca.core.inversion import InversionParameters, process_image
+from sambuca.core.io import RasterImageLoader, ImagePreprocessor
 
 
 class TestImageProcessingIntegration(unittest.TestCase):
@@ -58,7 +58,8 @@ class TestImageProcessingIntegration(unittest.TestCase):
 
     @classmethod
     def find_test_images(cls):
-        return {'test_image': os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'input', 'integration_test_image.tif')}
+        return {'test_image': os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'input',
+                                           'integration_test_image.tif')}
 
     def test_raster_image_loading(self):
         """Test basic raster image loading functionality."""

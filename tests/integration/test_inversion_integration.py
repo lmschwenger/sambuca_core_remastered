@@ -1,12 +1,12 @@
 """Integration tests for inversion algorithms and parameter handling."""
 
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 import pytest
 
 import sambuca.core as sbc
@@ -16,7 +16,6 @@ from sambuca.core.inversion import (
     multi_start_inversion,
     process_image
 )
-from sambuca.core.inversion.lut import LookUpTable
 from sambuca.core.inversion.objective_functions import (
     spectral_rmse,
     spectral_angle_mapper,
