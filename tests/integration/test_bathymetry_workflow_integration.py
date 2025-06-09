@@ -271,5 +271,6 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
             self.assertEqual(mock_create_rgb.call_count, 2)
             mock_create_rgb.assert_called_with(mock_data)
 
+
 if __name__ == '__main__':
     unittest.main()
