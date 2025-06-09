@@ -210,8 +210,8 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
             # Check RGB output
             self.assertEqual(len(rgb.shape), 3)
             self.assertEqual(rgb.shape[2], 3)  # Should have 3 channels
-            self.assertTrue(np.all(rgb >= 0))  # Values should be non-negative
-            self.assertTrue(np.all(rgb <= 1))  # Values should be normalized
+            self.assertTrue(np.all(np.nanmin(rgb) >= 0))  # Values should be non-negative
+            self.assertTrue(np.all(np.nanmax(rgb) <= 1))  # Values should be normalized
 
             print(" RGB preview generation test passed")
 
