@@ -5,19 +5,20 @@ forward model with optimizations for performance, especially memory usage
 and lookup speed.
 """
 
+import itertools
 import os
 import pickle
-import itertools
+import time
+from typing import Dict, List, Tuple, Union, Optional, Any
+
 import numpy as np
 from numpy.typing import NDArray
-from tqdm import tqdm
-from typing import Dict, List, Tuple, Union, Optional, Any
-import time
 from scipy.spatial import cKDTree
+from tqdm import tqdm
 
-from ..forward_model import forward_model
-from .parameters import InversionParameters
 from .optimization import invert_spectrum, multi_start_inversion
+from .parameters import InversionParameters
+from ..forward_model import forward_model
 
 
 class LookUpTable:

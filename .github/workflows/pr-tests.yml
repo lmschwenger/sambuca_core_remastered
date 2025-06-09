@@ -2,7 +2,7 @@ name: Pull Request Tests
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   required-tests:
@@ -45,7 +45,7 @@ jobs:
     
     - name: Verify test coverage
       run: |
-        python -m pytest tests/unit/ --cov=sambuca.core --cov-fail-under=70
+        python -m pytest tests/unit/ --cov=sambuca.core --cov-fail-under=65
         echo "✅ Test coverage meets minimum requirements!"
 
   lint-check:

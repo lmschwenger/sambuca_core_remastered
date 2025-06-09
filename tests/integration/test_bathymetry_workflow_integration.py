@@ -1,16 +1,16 @@
 """Integration tests for workflow functionality."""
 
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
+from unittest.mock import Mock, patch
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 import pytest
 
 from sambuca.core.workflows import BathymetryWorkflow
-from sambuca.core.results import ImageInversionResult
 
 
 class TestBathymetryWorkflowIntegration(unittest.TestCase):
@@ -211,8 +211,8 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
             # Check RGB output
             self.assertEqual(len(rgb.shape), 3)
             self.assertEqual(rgb.shape[2], 3)  # Should have 3 channels
-            self.assertTrue(np.all(rgb >= 0))  # Values should be non-negative
-            self.assertTrue(np.all(rgb <= 1))  # Values should be normalized
+            self.assertTrue(np.all(np.nanmin(rgb) >= 0))  # Values should be non-negative
+            self.assertTrue(np.all(np.nanmax(rgb) <= 1))  # Values should be normalized
 
             print(" RGB preview generation test passed")
 
@@ -247,6 +247,29 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
         self.assertEqual(workflow.inversion_params.fixed_chl, 2.5)
         self.assertEqual(workflow.inversion_params.fixed_cdom, 0.2)
         self.assertEqual(workflow.inversion_params.fixed_nap, 1.0)
+
+    def test_quick_preview_integration_with_mock_data(self):
+        """Integration test using actual matplotlib but with mocked data."""
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+
+        workflow = BathymetryWorkflow(self.siop_dir, sensor='sentinel2')
+
+        # Create realistic mock data
+        mock_data = np.random.rand(50, 50, 4) * 1000  # Simulate satellite bands
+        mock_rgb = np.random.rand(50, 50, 3)
+
+        workflow.image_loader.load = Mock(return_value=mock_data)
+
+        with patch('sambuca.core.io.ImagePreprocessor.create_rgb_preview',
+                   return_value=mock_rgb) as mock_create_rgb:
+            # Test both cases - this verifies the method runs end-to-end
+            workflow.quick_preview(self.test_image_path)
+            workflow.quick_preview(self.test_image_path, pixel_coords=(10, 15))
+
+            # Verify preprocessing was called correctly
+            self.assertEqual(mock_create_rgb.call_count, 2)
+            mock_create_rgb.assert_called_with(mock_data)
 
 
 if __name__ == '__main__':

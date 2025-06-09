@@ -33,19 +33,19 @@ class DataFetcherFactory:
     def create(cls, fetcher_name: str, **kwargs) -> BaseDataFetcher:
         """
         Create a data fetcher instance by name.
-        
+
         Args:
             fetcher_name: Name of the fetcher
             **kwargs: Arguments to pass to the fetcher constructor
-            
+
         Returns:
             Data fetcher instance
-            
+
         Raises:
             ValueError: If fetcher is unknown or dependencies not available
         """
         cls._ensure_registered()
-        
+
         fetcher_name = fetcher_name.lower()
         if fetcher_name not in cls._fetchers:
             available = ', '.join(cls._fetchers.keys()) if cls._fetchers else 'none'
@@ -53,12 +53,12 @@ class DataFetcherFactory:
 
         fetcher_class = cls._fetchers[fetcher_name]
         fetcher = fetcher_class(**kwargs)
-        
+
         # Check if fetcher is actually available
         if not fetcher.is_available():
             deps = ', '.join(fetcher.required_dependencies)
             raise ValueError(f"Data fetcher '{fetcher_name}' requires missing dependencies: {deps}")
-        
+
         return fetcher
 
     @classmethod
@@ -71,17 +71,17 @@ class DataFetcherFactory:
     def get_fetcher_info(cls, fetcher_name: Optional[str] = None) -> dict:
         """
         Get information about available data fetchers.
-        
+
         Args:
             fetcher_name: Specific fetcher name, or None for all
-            
+
         Returns:
             Dictionary with fetcher information
         """
         cls._ensure_registered()
-        
+
         info = {}
-        
+
         if fetcher_name:
             fetcher_name = fetcher_name.lower()
             if fetcher_name in cls._fetchers:
@@ -115,7 +115,7 @@ class DataFetcherFactory:
                         'available': False,
                         'error': 'Failed to initialize'
                     }
-        
+
         return info
 
 

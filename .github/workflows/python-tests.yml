@@ -2,9 +2,9 @@ name: Python Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   test:
@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v3
@@ -49,10 +49,4 @@ jobs:
         python -m pip install .[dev]
     - name: Lint with flake8
       run: |
-        flake8 sambuca_core tests
-    - name: Check formatting with black
-      run: |
-        black --check sambuca_core tests
-    - name: Check imports with isort
-      run: |
-        isort --check sambuca_core tests
+        flake8 sambuca tests

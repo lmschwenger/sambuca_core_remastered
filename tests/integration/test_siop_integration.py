@@ -1,17 +1,16 @@
 """Integration tests for SIOP management and sensor configurations."""
 
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import pytest
 
 import sambuca.core as sbc
-from sambuca.core.sensors import SensorFactory, Sentinel2Sensor
 from sambuca.core.inversion import InversionParameters
+from sambuca.core.sensors import SensorFactory, Sentinel2Sensor
 
 
 class TestSIOPIntegration(unittest.TestCase):

@@ -5,19 +5,18 @@ to derive water properties using the Sambuca inversion process, with
 optimizations for performance especially on Windows systems.
 """
 
-import os
-import multiprocessing as mp
-from functools import partial
-from typing import Dict, List, Tuple, Optional, Any, Union, Callable
 import concurrent.futures
+import os
+import time
+from typing import Dict, Tuple, Optional, Any
+
 import numpy as np
 from numpy.typing import NDArray
 from tqdm import tqdm
-import time
 
+from .lut import LookUpTable
 from .optimization import invert_spectrum, multi_start_inversion
 from .parameters import InversionParameters
-from .lut import LookUpTable
 
 
 def process_pixel(
@@ -64,7 +63,6 @@ def process_pixel(
             # If using multi-start refinement after LUT
             if refinement and use_multi_start:
                 # Use LUT result as one of the starting points
-                lut_params = [lut_result['parameters'][p] for p in inversion_parameters.get_inversion_parameter_names()]
                 result = multi_start_inversion(
                     pixel_spectra,
                     inversion_parameters,
@@ -82,7 +80,7 @@ def process_pixel(
             else:
                 return lut_result
 
-        except Exception as e:
+        except Exception:
             # Fall back to optimization if LUT fails
             pass
 
@@ -119,6 +117,7 @@ def process_pixel(
             'status': 'multi_start_failed' if use_multi_start else 'optimization_failed',
             'error_message': str(e),
         }
+
 
 # Function to process a batch of pixels (used by both ThreadPoolExecutor and ProcessPoolExecutor)
 def _process_pixel_batch(batch_data):
@@ -224,7 +223,6 @@ def process_image(
     param_names = inversion_parameters.get_inversion_parameter_names()
 
     # Prepare pixel batches for parallel processing
-    pixel_indices = list(range(n_pixels))
     pixel_coords = list(zip(y_indices, x_indices))
 
     # Create batches of pixels for processing
@@ -297,7 +295,7 @@ def process_image(
         valid_depths = output['depth'][valid_mask]
         if len(valid_depths) > 0:
             print(f"Depth statistics:")
-            print(f"  Valid pixels: {len(valid_depths)} of {n_pixels} ({len(valid_depths)/n_pixels*100:.1f}%)")
+            print(f"  Valid pixels: {len(valid_depths)} of {n_pixels} ({len(valid_depths) / n_pixels * 100:.1f}%)")
             print(f"  Min depth: {np.min(valid_depths):.2f} m")
             print(f"  Max depth: {np.max(valid_depths):.2f} m")
             print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
@@ -406,7 +404,7 @@ def batch_process_image(
             batch_iterator = tqdm(
                 [(y, x) for y in y_starts for x in x_starts],
                 total=total_batches,
-                desc=f"Processing {total_batches} image batches"
+                desc="Processing {} image batches".format(total_batches)
             )
         else:
             batch_iterator = [(y, x) for y in y_starts for x in x_starts]
@@ -450,7 +448,7 @@ def batch_process_image(
                 if valid_pixels > 0:
                     valid_depths = output['depth'][valid_mask]
                     print(f"Progress after {batch_count}/{total_batches} batches:")
-                    print(f"  Valid pixels: {valid_pixels} ({valid_pixels/(height*width)*100:.1f}%)")
+                    print(f"  Valid pixels: {valid_pixels} ({valid_pixels / (height * width) * 100:.1f}%)")
                     print(f"  Depth range: {np.min(valid_depths):.2f} - {np.max(valid_depths):.2f} m")
                     print(f"  Mean depth: {np.mean(valid_depths):.2f} m")
 
@@ -474,7 +472,8 @@ def batch_process_image(
             valid_depths = output['depth'][valid_mask]
             if len(valid_depths) > 0:
                 print("\nFinal depth statistics:")
-                print(f"  Valid pixels: {np.sum(valid_mask)} of {height*width} ({np.sum(valid_mask)/(height*width)*100:.1f}%)")
+                print(
+                    f"  Valid pixels: {np.sum(valid_mask)} of {height * width} ({np.sum(valid_mask) / (height * width) * 100:.1f}%)")
                 print(f"  Min depth: {np.min(valid_depths):.2f} m")
                 print(f"  Max depth: {np.max(valid_depths):.2f} m")
                 print(f"  Mean depth: {np.mean(valid_depths):.2f} m")

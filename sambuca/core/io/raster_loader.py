@@ -1,9 +1,8 @@
+from pathlib import Path
 from typing import Dict, Optional, List
 
-import rasterio
 import numpy as np
-from pathlib import Path
-
+import rasterio
 from numpy.typing import NDArray
 
 from .base import BaseImageLoader, ImageData
@@ -121,4 +120,4 @@ class RasterImageLoader(BaseImageLoader):
     @staticmethod
     def _convert_to_rrs(surface_reflectance: NDArray) -> NDArray:
         """Convert surface reflectance to remote sensing reflectance."""
-        return surface_reflectance # / np.pi --- doesnt work
+        return surface_reflectance  # / np.pi --- doesnt work

@@ -32,22 +32,22 @@ class BaseDataFetcher(ABC):
         pass
 
     @abstractmethod
-    def fetch_data(self, 
-                   aoi: str, 
-                   date: str, 
+    def fetch_data(self,
+                   aoi: str,
+                   date: str,
                    parameters: List[str] = None,
                    output_dir: Optional[str] = None,
                    **kwargs) -> Dict[str, str]:
         """
         Fetch data for the given area of interest and date.
-        
+
         Args:
             aoi: Area of Interest (format depends on fetcher)
             date: Target date in YYYY-MM-DD format
             parameters: List of parameters to fetch
             output_dir: Directory to save files
             **kwargs: Additional fetcher-specific arguments
-            
+
         Returns:
             Dictionary mapping parameter names to saved file paths
         """
@@ -60,4 +60,4 @@ class BaseDataFetcher(ABC):
             if unsupported:
                 supported = ', '.join(self.supported_parameters)
                 raise ValueError(f"Unsupported parameters: {unsupported}. "
-                               f"Supported: {supported}")
+                                 f"Supported: {supported}")

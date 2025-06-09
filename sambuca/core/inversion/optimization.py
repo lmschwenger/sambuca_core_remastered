@@ -66,8 +66,6 @@ def invert_spectrum(
     low_relax = 0.7
     high_relax = 1.3
 
-    cons = ({'type': 'ineq', 'fun': lambda x: high_relax - (x[4] + x[5] + x[6])},
-            {'type': 'ineq', 'fun': lambda x: (x[4] + x[5] + x[6]) - low_relax})
     # Perform optimization
     result = optimize.minimize(
         objective,

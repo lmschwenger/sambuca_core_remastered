@@ -1,23 +1,23 @@
 """Unit tests for sambuca.core.inversion modules."""
 
-import pytest
-import numpy as np
-import tempfile
 import shutil
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
+from unittest.mock import Mock, patch
 
-from sambuca.core.inversion.parameters import InversionParameters
+import numpy as np
+import pytest
+
 from sambuca.core.inversion.lut import LookUpTable
 from sambuca.core.inversion.objective_functions import (
-    spectral_rmse, 
-    spectral_angle_mapper, 
-    spectral_relative_rmse, 
+    spectral_rmse,
+    spectral_angle_mapper,
+    spectral_relative_rmse,
     spectral_chi_square,
     spectral_rmse_with_nedr
 )
-from sambuca.core.inversion.optimization_result import OptimizationResult
 from sambuca.core.inversion.optimization import invert_spectrum, multi_start_inversion
+from sambuca.core.inversion.optimization_result import OptimizationResult
+from sambuca.core.inversion.parameters import InversionParameters
 from sambuca.core.inversion.pixel_processor import process_pixel, process_image
 
 
@@ -27,13 +27,13 @@ class TestInversionParameters:
     def test_initialization_defaults(self):
         """Test default initialization."""
         params = InversionParameters()
-        
+
         assert params.chl is None
         assert params.cdom is None
         assert params.nap is None
         assert params.depth is None
         assert params.substrate_fraction is None
-        
+
         assert params.fixed_chl == 1.0
         assert params.fixed_cdom == 0.5
         assert params.fixed_nap == 1.0
@@ -50,7 +50,7 @@ class TestInversionParameters:
             a_ph_star=[0.05, 0.03, 0.02, 0.01],
             substrate1=[0.1, 0.2, 0.3, 0.4]
         )
-        
+
         assert params.chl == (0.1, 10.0)
         assert params.depth == (0.5, 30.0)
         assert len(params.wavelengths) == 4
@@ -63,7 +63,7 @@ class TestInversionParameters:
             cdom=(0.001, 0.1),
             depth=(0.5, 30.0)
         )
-        
+
         bounds = params.get_parameter_bounds()
         expected = [(0.1, 10.0), (0.001, 0.1), (0.5, 30.0)]
         assert bounds == expected
@@ -81,7 +81,7 @@ class TestInversionParameters:
             depth=(0.5, 30.0),
             substrate_fraction=(0.0, 1.0)
         )
-        
+
         names = params.get_inversion_parameter_names()
         expected = ['chl', 'depth', 'substrate_fraction']
         assert names == expected
@@ -92,7 +92,7 @@ class TestInversionParameters:
             chl=(0.1, 10.0),
             cdom=(0.001, 0.1)
         )
-        
+
         initial = params.get_initial_values()
         expected = [5.05, 0.0505]  # Midpoints
         assert np.allclose(initial, expected)
@@ -105,9 +105,9 @@ class TestInversionParameters:
             a_ph_star=[0.05, 0.03, 0.02, 0.01],
             substrate1=[0.1, 0.2, 0.3, 0.4]
         )
-        
+
         fwd_params = params.get_forward_model_params([])
-        
+
         assert fwd_params['chl'] == params.fixed_chl
         assert fwd_params['cdom'] == params.fixed_cdom
         assert fwd_params['depth'] == params.fixed_depth
@@ -124,11 +124,11 @@ class TestInversionParameters:
             a_ph_star=[0.05, 0.03, 0.02, 0.01],
             substrate1=[0.1, 0.2, 0.3, 0.4]
         )
-        
+
         # Test with inversion parameter values
         x = [2.5, 15.0]  # chl=2.5, depth=15.0
         fwd_params = params.get_forward_model_params(x)
-        
+
         assert fwd_params['chl'] == 2.5
         assert fwd_params['depth'] == 15.0
         assert fwd_params['cdom'] == params.fixed_cdom  # Should use fixed value
@@ -144,9 +144,9 @@ class TestInversionParameters:
         """Test setting NEDR values."""
         params = InversionParameters(wavelengths=[443, 490, 560, 665])
         nedr_values = [0.001, 0.002, 0.001, 0.0005]
-        
+
         result = params.set_nedr(nedr_values)
-        
+
         assert result is params  # Method chaining
         assert np.array_equal(params.nedr, nedr_values)
 
@@ -154,7 +154,7 @@ class TestInversionParameters:
         """Test setting NEDR with wrong length raises error."""
         params = InversionParameters(wavelengths=[443, 490, 560, 665])
         nedr_values = [0.001, 0.002]  # Wrong length
-        
+
         with pytest.raises(ValueError, match="NEDR values length"):
             params.set_nedr(nedr_values)
 
@@ -164,11 +164,11 @@ class TestInversionParameters:
             chl=(0.1, 10.0),
             depth=(0.5, 30.0)
         )
-        
+
         # Test with observed reflectance
         observed_rrs = np.array([0.05, 0.08, 0.06, 0.03])
         initial = params.get_adaptive_initial_values(observed_rrs)
-        
+
         assert len(initial) == 2  # chl and depth
         assert 0.1 <= initial[0] <= 10.0  # chl within bounds
         assert 0.5 <= initial[1] <= 30.0  # depth within bounds
@@ -179,9 +179,9 @@ class TestInversionParameters:
             chl=(0.1, 10.0),
             depth=(0.5, 30.0)
         )
-        
+
         initial = params.get_adaptive_initial_values()
-        
+
         assert len(initial) == 2
         assert all(isinstance(val, float) for val in initial)
 
@@ -199,7 +199,7 @@ class TestLookUpTable:
             a_ph_star=[0.05, 0.03, 0.02, 0.01],
             substrate1=[0.1, 0.2, 0.3, 0.4]
         )
-        
+
         self.lut = LookUpTable(self.params)
 
     def test_initialization(self):
@@ -216,10 +216,10 @@ class TestLookUpTable:
         mock_result = Mock()
         mock_result.rrs = np.array([0.05, 0.08, 0.06, 0.03])
         mock_forward_model.return_value = mock_result
-        
+
         # Build small table for testing
         self.lut.build_table(grid_size=3, progress_bar=False, use_kdtree=False)
-        
+
         assert self.lut.table_built is True
         assert self.lut.param_array is not None
         assert self.lut.spectra_array is not None
@@ -232,11 +232,11 @@ class TestLookUpTable:
         mock_result = Mock()
         mock_result.rrs = np.array([0.05, 0.08, 0.06, 0.03])
         mock_forward_model.return_value = mock_result
-        
+
         # Different grid sizes for each parameter
         grid_sizes = [2, 4]  # 2 for chl, 4 for depth
         self.lut.build_table(grid_size=grid_sizes, progress_bar=False, use_kdtree=False)
-        
+
         assert self.lut.param_array.shape == (8, 2)  # 2*4 combinations
         assert self.lut.grid_shape == (2, 4)
 
@@ -244,7 +244,7 @@ class TestLookUpTable:
         """Test building table with no parameters raises error."""
         empty_params = InversionParameters(wavelengths=[443, 490, 560, 665])
         lut = LookUpTable(empty_params)
-        
+
         with pytest.raises(ValueError, match="No parameters specified"):
             lut.build_table()
 
@@ -254,14 +254,14 @@ class TestLookUpTable:
         mock_result = Mock()
         mock_result.rrs = np.array([0.05, 0.08, 0.06, 0.03])
         mock_forward_model.return_value = mock_result
-        
+
         # Build small table
         self.lut.build_table(grid_size=2, progress_bar=False, use_kdtree=False)
-        
+
         # Test inversion
         observed_rrs = np.array([0.05, 0.08, 0.06, 0.03])
         result = self.lut.invert(observed_rrs, refine=False)
-        
+
         assert 'parameters' in result
         assert 'error' in result
         assert 'modeled_spectra' in result
@@ -270,7 +270,7 @@ class TestLookUpTable:
     def test_invert_not_built(self):
         """Test inversion when table not built raises error."""
         observed_rrs = np.array([0.05, 0.08, 0.06, 0.03])
-        
+
         with pytest.raises(ValueError, match="Look-up table not built"):
             self.lut.invert(observed_rrs)
 
@@ -295,11 +295,11 @@ class TestObjectiveFunctions:
         mock_result = Mock()
         mock_result.rrs = np.array([0.04, 0.09, 0.065, 0.025])
         mock_forward_model.return_value = mock_result
-        
+
         # Test RMSE calculation
         x = [2.0]  # chl value
         error = spectral_rmse(x, self.observed_rrs, self.params)
-        
+
         assert isinstance(error, (float, np.floating))
         assert error >= 0
         mock_forward_model.assert_called_once()
@@ -310,12 +310,12 @@ class TestObjectiveFunctions:
         mock_result = Mock()
         mock_result.rrs = np.array([0.04, 0.09, 0.065, 0.025])
         mock_forward_model.return_value = mock_result
-        
+
         x = [2.0]
         weights = np.array([1.0, 2.0, 1.5, 0.5])
-        
+
         error = spectral_rmse(x, self.observed_rrs, self.params, error_weight=weights)
-        
+
         assert isinstance(error, (float, np.floating))
         assert error >= 0
 
@@ -325,10 +325,10 @@ class TestObjectiveFunctions:
         mock_result = Mock()
         mock_result.rrs = np.array([0.04, 0.09, 0.065, 0.025])
         mock_forward_model.return_value = mock_result
-        
+
         x = [2.0]
         result = spectral_rmse(x, self.observed_rrs, self.params, return_modeled_spectra=True)
-        
+
         assert isinstance(result, dict)
         assert 'error' in result
         assert 'modeled_spectra' in result
@@ -340,10 +340,10 @@ class TestObjectiveFunctions:
         mock_result = Mock()
         mock_result.rrs = np.array([0.04, 0.09, 0.065, 0.025])
         mock_forward_model.return_value = mock_result
-        
+
         x = [2.0]
         angle = spectral_angle_mapper(x, self.observed_rrs, self.params)
-        
+
         assert isinstance(angle, (float, np.floating))
         assert 0 <= angle <= np.pi
 
@@ -353,10 +353,10 @@ class TestObjectiveFunctions:
         mock_result = Mock()
         mock_result.rrs = self.observed_rrs.copy()
         mock_forward_model.return_value = mock_result
-        
+
         x = [2.0]
         angle = spectral_angle_mapper(x, self.observed_rrs, self.params)
-        
+
         assert np.isclose(angle, 0.0, atol=1e-10)
 
     @patch('sambuca.core.inversion.objective_functions.forward_model')
@@ -365,10 +365,10 @@ class TestObjectiveFunctions:
         mock_result = Mock()
         mock_result.rrs = np.array([0.04, 0.09, 0.065, 0.025])
         mock_forward_model.return_value = mock_result
-        
+
         x = [2.0]
         error = spectral_relative_rmse(x, self.observed_rrs, self.params)
-        
+
         assert isinstance(error, (float, np.floating))
         assert error >= 0
 
@@ -378,10 +378,10 @@ class TestObjectiveFunctions:
         mock_result = Mock()
         mock_result.rrs = np.array([0.04, 0.09, 0.065, 0.025])
         mock_forward_model.return_value = mock_result
-        
+
         x = [2.0]
         chi_square = spectral_chi_square(x, self.observed_rrs, self.params)
-        
+
         assert isinstance(chi_square, (float, np.floating))
         assert chi_square >= 0
 
@@ -391,12 +391,12 @@ class TestObjectiveFunctions:
         mock_result = Mock()
         mock_result.rrs = np.array([0.04, 0.09, 0.065, 0.025])
         mock_forward_model.return_value = mock_result
-        
+
         x = [2.0]
         nedr = np.array([0.002, 0.003, 0.002, 0.001])
-        
+
         error = spectral_rmse_with_nedr(x, self.observed_rrs, self.params, nedr=nedr)
-        
+
         assert isinstance(error, (float, np.floating))
         assert error >= 0
 
@@ -409,13 +409,13 @@ class TestOptimizationResult:
         # Mock forward model results
         mock_forward_results = Mock()
         mock_forward_results.rrs = np.array([0.05, 0.08, 0.06, 0.03])
-        
+
         parameters = {'chl': 2.0, 'depth': 10.0}
         objective_value = 0.005
         observed_spectra = np.array([0.05, 0.08, 0.06, 0.03])
         modeled_spectra = np.array([0.04, 0.09, 0.065, 0.025])
         wavelengths = np.array([443, 490, 560, 665])
-        
+
         result = OptimizationResult(
             parameters=parameters,
             objective_value=objective_value,
@@ -426,7 +426,7 @@ class TestOptimizationResult:
             additional_info={'iterations': 15},
             forward_model_results=mock_forward_results
         )
-        
+
         assert result.parameters == parameters
         assert result.objective_value == objective_value
         assert np.array_equal(result.observed_spectra, observed_spectra)
@@ -460,7 +460,7 @@ class TestOptimization:
         mock_result = Mock()
         mock_result.rrs = np.array([0.04, 0.09, 0.065, 0.025])
         mock_forward_model.return_value = mock_result
-        
+
         # Mock optimization result
         mock_opt_result = Mock()
         mock_opt_result.x = [2.0, 10.0]
@@ -469,9 +469,9 @@ class TestOptimization:
         mock_opt_result.nit = 15
         mock_opt_result.message = "Optimization terminated successfully"
         mock_minimize.return_value = mock_opt_result
-        
+
         result = invert_spectrum(self.observed_rrs, self.params)
-        
+
         assert isinstance(result, OptimizationResult)
         assert result.parameters['chl'] == 2.0
         assert result.parameters['depth'] == 10.0
@@ -481,7 +481,7 @@ class TestOptimization:
     def test_invert_spectrum_no_parameters(self):
         """Test inversion with no parameters raises error."""
         empty_params = InversionParameters(wavelengths=[443, 490, 560, 665])
-        
+
         with pytest.raises(ValueError, match="No parameters specified"):
             invert_spectrum(self.observed_rrs, empty_params)
 
@@ -495,11 +495,11 @@ class TestOptimization:
             mock_result.objective_value = 0.01 + i * 0.001  # Different errors
             mock_result.parameters = {'chl': 2.0 + i, 'depth': 10.0 + i}
             mock_results.append(mock_result)
-        
+
         mock_invert.side_effect = mock_results
-        
+
         result = multi_start_inversion(self.observed_rrs, self.params, n_starts=3)
-        
+
         # Should return the result with lowest error (first one)
         assert result is mock_results[0]
         assert mock_invert.call_count == 3
@@ -522,9 +522,9 @@ class TestPixelProcessor:
         """Test processing invalid pixel."""
         # Pixel with NaN values
         invalid_pixel = np.array([np.nan, 0.08, 0.06, 0.03])
-        
+
         result = process_pixel(invalid_pixel, self.params, lut=None, refinement=False)
-        
+
         assert result['status'] == 'invalid_pixel'
         assert np.isnan(result['error'])
         assert all(np.isnan(result['parameters'][p]) for p in result['parameters'])
@@ -533,9 +533,9 @@ class TestPixelProcessor:
         """Test processing pixel with negative values."""
         # Pixel with negative values
         invalid_pixel = np.array([-0.01, 0.08, 0.06, 0.03])
-        
+
         result = process_pixel(invalid_pixel, self.params, lut=None, refinement=False)
-        
+
         assert result['status'] == 'invalid_pixel'
 
     @patch('sambuca.core.inversion.pixel_processor.invert_spectrum')
@@ -548,11 +548,11 @@ class TestPixelProcessor:
         mock_result.modeled_spectra = np.array([0.04, 0.09, 0.065, 0.025])
         mock_result.convergence_status = True
         mock_invert.return_value = mock_result
-        
+
         valid_pixel = np.array([0.05, 0.08, 0.06, 0.03])
-        
+
         result = process_pixel(valid_pixel, self.params, lut=None, refinement=False)
-        
+
         assert result['status'] == 'optimization_success'
         assert result['parameters']['chl'] == 2.0
         assert result['error'] == 0.005
@@ -563,11 +563,11 @@ class TestPixelProcessor:
         """Test processing pixel when optimization fails."""
         # Mock optimization to raise exception
         mock_invert.side_effect = Exception("Optimization failed")
-        
+
         valid_pixel = np.array([0.05, 0.08, 0.06, 0.03])
-        
+
         result = process_pixel(valid_pixel, self.params, lut=None, refinement=False)
-        
+
         assert result['status'] == 'optimization_failed'
         assert 'error_message' in result
         assert np.isnan(result['error'])
@@ -576,7 +576,7 @@ class TestPixelProcessor:
         """Test processing image with invalid dimensions."""
         # Wrong number of dimensions
         invalid_image = np.random.rand(50, 50)  # Only 2D
-        
+
         with pytest.raises(ValueError, match="Image must have 3 dimensions"):
             process_image(invalid_image, self.params)
 
@@ -584,7 +584,7 @@ class TestPixelProcessor:
         """Test processing image with mismatched band dimensions."""
         # Image with wrong number of bands
         invalid_image = np.random.rand(50, 50, 6)  # 6 bands, but params has 4
-        
+
         with pytest.raises(ValueError, match="does not match wavelengths length"):
             process_image(invalid_image, self.params)
 
@@ -599,18 +599,18 @@ class TestPixelProcessor:
             'convergence': True,
             'status': 'success'
         }
-        
+
         # Create image with bands-first format
         image = np.random.rand(4, 10, 10)  # (bands, height, width)
-        
+
         result = process_image(
-            image, 
-            self.params, 
-            n_processes=1, 
+            image,
+            self.params,
+            n_processes=1,
             progress_bar=False,
             use_threads=True
         )
-        
+
         assert 'chl' in result
         assert result['chl'].shape == (10, 10)
         assert 'error' in result
@@ -627,18 +627,18 @@ class TestPixelProcessor:
             'convergence': True,
             'status': 'success'
         }
-        
+
         # Create image with bands-last format
         image = np.random.rand(10, 10, 4)  # (height, width, bands)
-        
+
         result = process_image(
-            image, 
-            self.params, 
-            n_processes=1, 
+            image,
+            self.params,
+            n_processes=1,
             progress_bar=False,
             use_threads=True
         )
-        
+
         assert 'chl' in result
         assert result['chl'].shape == (10, 10)
 
@@ -653,20 +653,20 @@ class TestPixelProcessor:
             'convergence': True,
             'status': 'success'
         }
-        
+
         image = np.random.rand(5, 5, 4)
         mask = np.ones((5, 5), dtype=bool)
         mask[0:2, 0:2] = False  # Mask out some pixels
-        
+
         result = process_image(
-            image, 
-            self.params, 
+            image,
+            self.params,
             mask=mask,
-            n_processes=1, 
+            n_processes=1,
             progress_bar=False,
             use_threads=True
         )
-        
+
         assert 'chl' in result
         # Should have NaN values where mask is False
         assert np.isnan(result['chl'][0, 0])
@@ -676,13 +676,13 @@ class TestPixelProcessor:
         """Test processing image with empty mask."""
         image = np.random.rand(5, 5, 4)
         mask = np.zeros((5, 5), dtype=bool)  # All False
-        
+
         with pytest.raises(ValueError, match="No pixels to process"):
             process_image(
-                image, 
-                self.params, 
+                image,
+                self.params,
                 mask=mask,
-                n_processes=1, 
+                n_processes=1,
                 progress_bar=False
             )
 
@@ -690,13 +690,13 @@ class TestPixelProcessor:
         """Test processing image with incorrectly shaped mask."""
         image = np.random.rand(5, 5, 4)
         mask = np.ones((3, 3), dtype=bool)  # Wrong shape
-        
+
         with pytest.raises(ValueError, match="Mask shape .* does not match image shape"):
             process_image(
-                image, 
-                self.params, 
+                image,
+                self.params,
                 mask=mask,
-                n_processes=1, 
+                n_processes=1,
                 progress_bar=False
             )
 
@@ -723,19 +723,19 @@ class TestInversionIntegration:
             a_ph_star=[0.05, 0.03, 0.02, 0.01],
             substrate1=[0.1, 0.2, 0.3, 0.4]
         )
-        
+
         # Test parameter bounds and names
         bounds = params.get_parameter_bounds()
         names = params.get_inversion_parameter_names()
-        
+
         assert len(bounds) == 2
         assert len(names) == 2
         assert names == ['chl', 'depth']
-        
+
         # Test forward model parameter generation
         x = [2.0, 10.0]  # chl=2.0, depth=10.0
         fwd_params = params.get_forward_model_params(x)
-        
+
         assert fwd_params['chl'] == 2.0
         assert fwd_params['depth'] == 10.0
         assert fwd_params['cdom'] == params.fixed_cdom
@@ -750,20 +750,20 @@ class TestInversionIntegration:
             a_ph_star=[0.05, 0.03, 0.02, 0.01],
             substrate1=[0.1, 0.2, 0.3, 0.4]
         )
-        
+
         observed_rrs = np.array([0.05, 0.08, 0.06, 0.03])
         x = [2.0]  # chl value
-        
+
         with patch('sambuca.core.inversion.objective_functions.forward_model') as mock_fm:
             # Mock forward model to return consistent results
             mock_result = Mock()
             mock_result.rrs = np.array([0.05, 0.08, 0.06, 0.03])  # Perfect match
             mock_fm.return_value = mock_result
-            
+
             # Test different objective functions
             rmse = spectral_rmse(x, observed_rrs, params)
             sam = spectral_angle_mapper(x, observed_rrs, params)
-            
+
             # Perfect match should give very small errors
             assert rmse < 1e-10
             assert sam < 1e-10  # Should be very small angle
@@ -777,27 +777,27 @@ class TestInversionIntegration:
             a_ph_star=[0.05, 0.03, 0.02, 0.01],
             substrate1=[0.1, 0.2, 0.3, 0.4]
         )
-        
+
         observed = np.array([0.05, 0.08, 0.06, 0.03])
         x = [2.0]
-        
+
         # Test with different modeled spectra
         test_cases = [
             ([0.05, 0.08, 0.06, 0.03], "identical"),  # Perfect match
-            ([0.10, 0.16, 0.12, 0.06], "scaled"),     # 2x scaling
-            ([0.03, 0.06, 0.04, 0.01], "reduced"),    # 0.6x scaling
+            ([0.10, 0.16, 0.12, 0.06], "scaled"),  # 2x scaling
+            ([0.03, 0.06, 0.04, 0.01], "reduced"),  # 0.6x scaling
         ]
-        
+
         for modeled_values, case_name in test_cases:
             with patch('sambuca.core.inversion.objective_functions.forward_model') as mock_fm:
                 mock_result = Mock()
                 mock_result.rrs = np.array(modeled_values)
                 mock_fm.return_value = mock_result
-                
+
                 rmse = spectral_rmse(x, observed, params)
                 sam = spectral_angle_mapper(x, observed, params)
                 rel_rmse = spectral_relative_rmse(x, observed, params)
-                
+
                 if case_name == "identical":
                     # Perfect match should give zero errors
                     assert rmse < 1e-10

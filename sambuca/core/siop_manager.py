@@ -1,11 +1,12 @@
 """Management of Spectral Inherent Optical Properties (SIOPs) for different sensors."""
 
 import os
-import numpy as np
 from typing import Dict, List, Tuple, Optional, Any, Union
+
+import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 from scipy.interpolate import interp1d
-import pandas as pd
 
 
 class SIOPManager:
@@ -148,7 +149,7 @@ class SIOPManager:
         for name, (src_wavelengths, src_values) in self.raw_libraries.items():
             # Check if wavelength ranges overlap enough
             if min(src_wavelengths) > max(target_wavelengths) or \
-               max(src_wavelengths) < min(target_wavelengths):
+                    max(src_wavelengths) < min(target_wavelengths):
                 print(f"Warning: Spectral library '{name}' does not cover the target wavelength range")
                 continue
 

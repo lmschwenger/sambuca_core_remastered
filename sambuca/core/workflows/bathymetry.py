@@ -1,6 +1,8 @@
 from pathlib import Path
-from typing import Optional, Dict, Any, Tuple, List
+from typing import Optional, Dict, Any, Tuple
+
 import numpy as np
+
 from .base import BaseWorkflow
 from ..inversion import InversionParameters, process_image
 from ..io import ImagePreprocessor
@@ -82,7 +84,7 @@ class BathymetryWorkflow(BaseWorkflow):
                       progress_bar: bool = True,
                       **kwargs) -> 'ImageInversionResult':
         """
-        Process entire image for bathymetry retrieval.
+        Process the entire image for bathymetry retrieval.
 
         Args:
             image_path: Path to satellite image
