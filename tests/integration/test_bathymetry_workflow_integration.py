@@ -4,6 +4,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
@@ -247,6 +248,28 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
         self.assertEqual(workflow.inversion_params.fixed_cdom, 0.2)
         self.assertEqual(workflow.inversion_params.fixed_nap, 1.0)
 
+    def test_quick_preview_integration_with_mock_data(self):
+        """Integration test using actual matplotlib but with mocked data."""
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+
+        workflow = BathymetryWorkflow(self.siop_dir, sensor='sentinel2')
+
+        # Create realistic mock data
+        mock_data = np.random.rand(50, 50, 4) * 1000  # Simulate satellite bands
+        mock_rgb = np.random.rand(50, 50, 3)
+
+        workflow.image_loader.load = Mock(return_value=mock_data)
+
+        with patch('sambuca.core.io.ImagePreprocessor.create_rgb_preview',
+                   return_value=mock_rgb) as mock_create_rgb:
+            # Test both cases - this verifies the method runs end-to-end
+            workflow.quick_preview(self.test_image_path)
+            workflow.quick_preview(self.test_image_path, pixel_coords=(10, 15))
+
+            # Verify preprocessing was called correctly
+            self.assertEqual(mock_create_rgb.call_count, 2)
+            mock_create_rgb.assert_called_with(mock_data)
 
 if __name__ == '__main__':
     unittest.main()
