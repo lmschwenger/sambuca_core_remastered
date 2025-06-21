@@ -1,6 +1,6 @@
 # SAMBUCA Core
 
-[![Python Tests](https://github.com/csiro-aquatic-remote-sensing/sambuca_core/actions/workflows/python-tests.yml/badge.svg)](https://github.com/lmschwenger/sambuca_core_remastered/actions/workflows/python-tests.yml)
+[![Documentation Status](https://readthedocs.org/projects/sambuca-core-remastered/badge/?version=latest)](https://sambuca-core-remastered.readthedocs.io/en/latest/?badge=latest)
 
 **Semi-Analytical Model for Bathymetry, Un-mixing, and Concentration Assessment (SAMBUCA)**
 
@@ -260,6 +260,7 @@ pytest tests/
 
 ## 📖 Documentation
 
+- **[📚 Complete Documentation](https://sambuca-core-remastered.readthedocs.io/en/latest/)** - Full documentation on Read the Docs
 - **[API Reference](docs/api/)** - Complete function documentation
 - **[Theory Guide](docs/theory/)** - Scientific background and equations
 - **[Tutorials](tutorials/)** - Jupyter notebook tutorials
