@@ -1,11 +1,13 @@
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .image_result import ImageInversionResult
+# Use TYPE_CHECKING to avoid circular imports while maintaining type hints
+if TYPE_CHECKING:
+    from sambuca.core.results import ImageInversionResult
 
 
 class ResultVisualizer:

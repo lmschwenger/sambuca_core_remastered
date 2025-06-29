@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import rasterio
 from skimage.draw import line
@@ -141,55 +140,6 @@ class ImageInversionResult:
 
         print("=" * 60)
 
-    def plot_summary(self,
-                     figsize: Tuple[int, int] = (15, 10),
-                     save_path: Optional[str] = None,
-                     dpi: int = 300) -> 'plt.Figure':
-        """
-        Create comprehensive summary plot.
-
-        Args:
-            figsize: Figure size (width, height)
-            save_path: Optional path to save figure
-            dpi: Resolution for saved figure
-
-        Returns:
-            matplotlib Figure object
-        """
-        from .visualization import ResultVisualizer
-
-        visualizer = ResultVisualizer(self)
-        fig = visualizer.create_summary_plot(figsize=figsize)
-
-        if save_path:
-            fig.savefig(save_path, dpi=dpi, bbox_inches='tight')
-            print(f"Summary plot saved to: {save_path}")
-
-        return fig
-
-    def plot_parameter(self,
-                       param_name: str,
-                       figsize: Tuple[int, int] = (10, 8),
-                       colormap: str = 'auto',
-                       **kwargs) -> 'plt.Figure':
-        """
-        Plot individual parameter map.
-
-        Args:
-            param_name: Name of parameter to plot
-            figsize: Figure size
-            colormap: Colormap name or 'auto' for automatic selection
-            **kwargs: Additional arguments for imshow
-
-        Returns:
-            matplotlib Figure object
-        """
-        from .visualization import ResultVisualizer
-
-        visualizer = ResultVisualizer(self)
-        return visualizer.plot_parameter(param_name, figsize=figsize,
-                                         colormap=colormap, **kwargs)
-
     def save_depth_map(self, output_path: str, fmt: str = 'tiff'):
         """
         Save depth map as GeoTIFF.
@@ -268,12 +218,22 @@ class ImageInversionResult:
             dst.set_band_description(1, param_name)
 
     def _save_as_png(self, output_path: Path, param_name: str):
-        """Save parameter as PNG with colorbar."""
+        """Save parameter as PNG with basic visualization."""
         import matplotlib.pyplot as plt
-        from .visualization import ResultVisualizer
-
-        visualizer = ResultVisualizer(self)
-        fig = visualizer.plot_parameter(param_name, show_colorbar=True)
+        
+        data = self.results[param_name]
+        masked_data = np.ma.masked_invalid(data)
+        
+        fig, ax = plt.subplots(figsize=(10, 8))
+        im = ax.imshow(masked_data, cmap='viridis')
+        ax.set_title(f'{param_name.replace("_", " ").title()}')
+        ax.set_xlabel('Column')
+        ax.set_ylabel('Row')
+        
+        # Add colorbar
+        cbar = plt.colorbar(im, ax=ax)
+        cbar.set_label(param_name)
+        
         fig.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close(fig)
 
