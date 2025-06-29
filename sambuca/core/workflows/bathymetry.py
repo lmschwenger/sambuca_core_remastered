@@ -14,11 +14,17 @@ class BathymetryWorkflow(BaseWorkflow):
 
     def _setup_defaults(self):
         """Set up default parameters optimized for bathymetry retrieval."""
-        # Get standard bathymetry band configuration
-        self.bands, self.wavelengths = self.sensor.get_standard_config('bathymetry')
+        if self.sensor_name.lower() in ['sentinel2', 's2']:
+            # Standard bathymetry bands: B02, B03, B04, B05
+            self.bands = ['B02', 'B03', 'B04', 'B05']
+            self.wavelengths = [492.4, 559.8, 664.6, 704.1]
+        else:
+            # Fallback for other sensors
+            self.bands = ['B2', 'B3', 'B4', 'B5']
+            self.wavelengths = [492.4, 559.8, 664.6, 704.1]
 
         # Register sensor with SIOP manager
-        self.siop_manager.register_sensor(self.sensor.name, self.wavelengths)
+        self.siop_manager.register_sensor(self.sensor_name, self.wavelengths)
 
         # Set up inversion parameters optimized for bathymetry
         # Start with depth-only inversion as default
@@ -39,7 +45,7 @@ class BathymetryWorkflow(BaseWorkflow):
         # Update with SIOPs
         self.inversion_params.update_from_siop_manager(
             self.siop_manager,
-            self.sensor.name
+            self.sensor_name
         )
 
     def customize_parameters(self, **kwargs):

@@ -11,6 +11,7 @@ import numpy as np
 
 from sambuca.core.workflows import BathymetryWorkflow
 from sambuca.core.inversion import LookUpTable, process_image
+from sambuca.core.sensors import S2
 
 
 def main():
@@ -33,16 +34,17 @@ def main():
         fixed_substrate_fraction=1,
     )
 
-    workflow.wavelengths = [492.4, 559.8, 664.6, 704.1]
+    workflow.wavelengths = [S2.B02.wavelength, S2.B03.wavelength, S2.B04.wavelength, S2.B05.wavelength]
     workflow.bands = [2, 3, 4, 5]
 
     # Build LUT (this may take a few minutes the first time)
     lut = LookUpTable(workflow.inversion_params)
 
-    print("Building LUT with 30 depth levels...")
+    grid_size = 200
+    print(f"Building LUT with {grid_size} depth levels...")
     start_time = time.time()
     lut.build_table(
-        grid_size=200,  # 30 depth values from 0-25m
+        grid_size=grid_size,  # 30 depth values from 0-25m
         progress_bar=True,
         use_kdtree=True  # Enable fast lookups
     )

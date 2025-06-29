@@ -22,4 +22,5 @@ __all__ = [
     'process_pixel',
     'process_image',
     'batch_process_image',
+    'multi_start_inversion'
 ]

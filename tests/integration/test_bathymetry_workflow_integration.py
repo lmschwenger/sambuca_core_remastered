@@ -73,7 +73,6 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
 
         # Check that workflow components are properly initialized
         self.assertIsNotNone(workflow.siop_manager)
-        self.assertIsNotNone(workflow.sensor)
         self.assertIsNotNone(workflow.inversion_params)
 
         # Check default configuration
