@@ -29,7 +29,7 @@ def get_long_description():
 
 # Package metadata
 NAME = "sambuca-utils"
-DESCRIPTION = "Utility package for SAMBUCA - Semi-Analytical Model for Bathymetry, Un-mixing, and Concentration Assessment"
+DESCRIPTION = "Utility package for SAMBUCA with data fetching capabilities"
 URL = "https://github.com/lmschwenger/sambuca_core_remastered"
 AUTHOR = "Lasse M. Schwenger"
 AUTHOR_EMAIL = "lasse.m.schwenger@gmail.com"
@@ -38,6 +38,13 @@ LICENSE = "MIT"
 # Minimal requirements for base package
 INSTALL_REQUIRES = [
     "numpy>=1.20.0",
+    "copernicusmarine>=1.0.0",
+    "xarray>=0.20.0",
+    "rasterio>=1.2.0",
+    "geopandas>=0.12.0",
+    "shapely>=1.8.0",
+    "pandas>=1.3.0",
+    "scipy>=1.7.0",
 ]
 
 # Optional dependencies
@@ -83,6 +90,9 @@ KEYWORDS = [
     "remote sensing", 
     "bathymetry",
     "ocean optics",
+    "data fetching",
+    "satellite data",
+    "sentinel-3",
     "utilities",
     "scientific computing",
 ]

@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .base import BaseDataFetcher
-from ..exceptions import SambucaException
 
 # Suppress warnings from external libraries
 warnings.filterwarnings('ignore')
@@ -32,9 +31,8 @@ class Sentinel3DataFetcher(BaseDataFetcher):
         """Initialize the fetcher with output directory."""
         # Set default output directory
         if output_dir is None:
-            # Default to sambuca data/input directory
-            base_dir = Path(__file__).parent.parent.parent.parent
-            self.output_dir = base_dir / "data" / "input" / "sentinel3"
+            # Default to current working directory + data/input/sentinel3
+            self.output_dir = Path.cwd() / "data" / "input" / "sentinel3"
         else:
             self.output_dir = Path(output_dir)
 
@@ -124,7 +122,7 @@ class Sentinel3DataFetcher(BaseDataFetcher):
                 except ImportError:
                     missing.append(dep)
 
-            raise SambucaException(
+            raise RuntimeError(
                 f"Sentinel-3 fetcher requires missing dependencies: {missing}. "
                 f"Install with: pip install {' '.join(missing)}"
             )

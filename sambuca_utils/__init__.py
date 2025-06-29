@@ -8,4 +8,7 @@ __version__ = "0.1.0"
 __author__ = "Lasse M. Schwenger"
 __email__ = "lasse.m.schwenger@gmail.com"
 
-__all__ = []
+# Import main utility modules for convenience
+from . import data_fetchers
+
+__all__ = ["data_fetchers"]
