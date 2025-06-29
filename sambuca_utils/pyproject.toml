@@ -1,0 +1,106 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sambuca-utils"
+dynamic = ["version"]
+description = "Utility package for SAMBUCA - Semi-Analytical Model for Bathymetry, Un-mixing, and Concentration Assessment"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Lasse M. Schwenger", email = "lasse.m.schwenger@gmail.com"}
+]
+maintainers = [
+    {name = "Lasse M. Schwenger", email = "lasse.m.schwenger@gmail.com"}
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.20.0",
+]
+keywords = [
+    "sambuca",
+    "remote sensing", 
+    "bathymetry",
+    "ocean optics",
+    "utilities",
+    "scientific computing",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/lmschwenger/sambuca_core_remastered"
+"Bug Reports" = "https://github.com/lmschwenger/sambuca_core_remastered/issues"
+Source = "https://github.com/lmschwenger/sambuca_core_remastered"
+Documentation = "https://github.com/lmschwenger/sambuca_core_remastered#readme"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0.0",
+    "pytest-cov>=2.12.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.910",
+    "isort>=5.10.0",
+]
+docs = [
+    "sphinx>=4.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "sambuca_utils.__version__"}
+
+[tool.setuptools.packages.find]
+exclude = ["tests*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "--verbose --cov=sambuca_utils"
+
+[tool.coverage.run]
+source = ["sambuca_utils"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
