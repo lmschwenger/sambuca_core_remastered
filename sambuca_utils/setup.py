@@ -29,7 +29,7 @@ def get_long_description():
 
 # Package metadata
 NAME = "sambuca-utils"
-DESCRIPTION = "Utility package for SAMBUCA with data fetching capabilities"
+DESCRIPTION = "Utility package for SAMBUCA with data fetching and visualization capabilities"
 URL = "https://github.com/lmschwenger/sambuca_core_remastered"
 AUTHOR = "Lasse M. Schwenger"
 AUTHOR_EMAIL = "lasse.m.schwenger@gmail.com"
@@ -38,6 +38,7 @@ LICENSE = "MIT"
 # Minimal requirements for base package
 INSTALL_REQUIRES = [
     "numpy>=1.20.0",
+    "matplotlib>=3.5.0",
     "copernicusmarine>=1.0.0",
     "xarray>=0.20.0",
     "rasterio>=1.2.0",
@@ -93,6 +94,9 @@ KEYWORDS = [
     "data fetching",
     "satellite data",
     "sentinel-3",
+    "visualization",
+    "plotting",
+    "matplotlib",
     "utilities",
     "scientific computing",
 ]

@@ -9,6 +9,7 @@ This package provides data fetching utilities for the SAMBUCA ecosystem, includi
 ## Features
 
 - **Sentinel-3 OLCI Data Fetching**: Download water quality parameters (chlorophyll, suspended matter, CDOM) from Copernicus Marine Service
+- **Professional Visualization**: Advanced plotting and visualization tools for SAMBUCA inversion results
 - **Flexible AOI Support**: Bounding boxes, WKT polygons, or shapefiles
 - **Multiple Data Sources**: Automatic fallback between different dataset versions
 - **Professional Data Processing**: Outputs calibrated GeoTIFF files ready for analysis
@@ -76,6 +77,52 @@ export COP_MARINE_USER="your_username"
 export COP_MARINE_PASS="your_password"
 ```
 
+### Result Visualization
+
+Visualize SAMBUCA inversion results with professional plotting tools:
+
+```python
+from sambuca.core.results import ImageInversionResult
+from sambuca_utils.visualization import ResultVisualizer
+
+# Assuming you have an inversion result
+result = ImageInversionResult(...)  # From your SAMBUCA inversion
+
+# Create visualizer
+viz = ResultVisualizer(result)
+
+# Plot individual parameters
+fig1 = viz.plot_parameter('depth', colormap='viridis')
+fig2 = viz.plot_parameter('chl', colormap='YlGn')
+
+# Create comprehensive summary plot
+summary_fig = viz.create_summary_plot(figsize=(15, 10))
+
+# Save plots
+summary_fig.savefig('inversion_summary.png', dpi=300, bbox_inches='tight')
+```
+
+### Advanced Visualization
+
+```python
+# Custom visualization with specific parameters
+fig = viz.plot_parameter(
+    'depth', 
+    figsize=(12, 8),
+    colormap='plasma',
+    vmin=0, vmax=10  # Custom value range
+)
+
+# Create publication-ready plots
+summary = viz.create_summary_plot(figsize=(20, 12))
+summary.savefig(
+    'results_for_publication.pdf', 
+    dpi=300, 
+    bbox_inches='tight',
+    facecolor='white'
+)
+```
+
 ## Development
 
 To contribute to this package:
@@ -99,6 +146,7 @@ mypy sambuca_utils/
 
 - Python >= 3.8
 - numpy >= 1.20.0
+- matplotlib >= 3.5.0
 - copernicusmarine >= 1.0.0
 - xarray >= 0.20.0
 - rasterio >= 1.2.0
@@ -106,6 +154,12 @@ mypy sambuca_utils/
 - shapely >= 1.8.0
 - pandas >= 1.3.0
 - scipy >= 1.7.0
+
+### Module Dependencies
+
+- **Data Fetching**: copernicusmarine, xarray, rasterio, geopandas, shapely
+- **Visualization**: matplotlib, numpy
+- **Core Utilities**: pandas, scipy
 
 ### Supported Data Sources
 
