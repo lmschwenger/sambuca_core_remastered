@@ -19,7 +19,6 @@ Spectra = Tuple[List[float], List[float]]
 SpectraDict = Dict[str, Spectra]
 
 
-
 def main():
     """Entry point for command-line usage."""
     print(f"SAMBUCA Core v{__version__}")

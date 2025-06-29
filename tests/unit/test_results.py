@@ -9,7 +9,6 @@ import numpy as np
 import pytest
 
 from sambuca.core.results.image_result import ImageInversionResult
-from sambuca.core.results.visualization import ResultVisualizer
 
 
 class TestImageInversionResult:
@@ -179,36 +178,6 @@ class TestImageInversionResult:
         assert "ERROR STATISTICS:" in output
         assert "CONVERGENCE:" in output
 
-    @patch('sambuca.core.results.visualization.ResultVisualizer')
-    def test_plot_summary(self, mock_visualizer_class):
-        """Test summary plot creation."""
-        # Mock visualizer
-        mock_visualizer = Mock()
-        mock_fig = Mock()
-        mock_visualizer.create_summary_plot.return_value = mock_fig
-        mock_visualizer_class.return_value = mock_visualizer
-
-        result_fig = self.result.plot_summary(figsize=(12, 8))
-
-        assert result_fig is mock_fig
-        mock_visualizer_class.assert_called_once_with(self.result)
-        mock_visualizer.create_summary_plot.assert_called_once_with(figsize=(12, 8))
-
-    @patch('sambuca.core.results.visualization.ResultVisualizer')
-    def test_plot_parameter(self, mock_visualizer_class):
-        """Test individual parameter plotting."""
-        mock_visualizer = Mock()
-        mock_fig = Mock()
-        mock_visualizer.plot_parameter.return_value = mock_fig
-        mock_visualizer_class.return_value = mock_visualizer
-
-        result_fig = self.result.plot_parameter('depth', colormap='viridis')
-
-        assert result_fig is mock_fig
-        mock_visualizer.plot_parameter.assert_called_once_with(
-            'depth', figsize=(10, 8), colormap='viridis'
-        )
-
     def test_extract_transect_invalid_parameter(self):
         """Test transect extraction with invalid parameter."""
         with pytest.raises(KeyError):
@@ -269,19 +238,26 @@ class TestImageInversionResultFileIO:
         mock_dataset.set_band_description.assert_called_once_with(1, 'depth')
 
     @patch('matplotlib.pyplot.close')
-    @patch('sambuca.core.results.visualization.ResultVisualizer')
-    def test_save_depth_map_png(self, mock_visualizer_class, mock_plt_close):
+    @patch('matplotlib.pyplot.colorbar')
+    @patch('matplotlib.pyplot.subplots')
+    def test_save_depth_map_png(self, mock_subplots, mock_colorbar, mock_plt_close):
         """Test saving depth map as PNG."""
-        mock_visualizer = Mock()
+        # Mock matplotlib components
         mock_fig = Mock()
-        mock_visualizer.plot_parameter.return_value = mock_fig
-        mock_visualizer_class.return_value = mock_visualizer
+        mock_ax = Mock()
+        mock_subplots.return_value = (mock_fig, mock_ax)
+        mock_im = Mock()
+        mock_ax.imshow.return_value = mock_im
 
         output_path = Path(self.temp_dir) / "depth.png"
 
         self.result.save_depth_map(str(output_path), fmt='png')
 
-        mock_visualizer.plot_parameter.assert_called_once_with('depth', show_colorbar=True)
+        # Verify matplotlib calls
+        mock_subplots.assert_called_once_with(figsize=(10, 8))
+        mock_ax.imshow.assert_called_once()
+        mock_ax.set_title.assert_called_once()
+        mock_colorbar.assert_called_once()
         mock_fig.savefig.assert_called_once_with(output_path, dpi=300, bbox_inches='tight')
         mock_plt_close.assert_called_once_with(mock_fig)
 
@@ -303,18 +279,21 @@ class TestImageInversionResultFileIO:
             self.result.save_depth_map(str(output_path), fmt='xyz')
 
     @patch('rasterio.open')
-    @patch('sambuca.core.results.visualization.ResultVisualizer')
-    def test_save_all_parameters(self, mock_visualizer_class, mock_rasterio_open):
+    @patch('matplotlib.pyplot.close')
+    @patch('matplotlib.pyplot.colorbar')
+    @patch('matplotlib.pyplot.subplots')
+    def test_save_all_parameters(self, mock_subplots, mock_colorbar, mock_plt_close, mock_rasterio_open):
         """Test saving all parameters."""
         # Mock rasterio
         mock_dataset = Mock()
         mock_rasterio_open.return_value.__enter__.return_value = mock_dataset
 
-        # Mock visualizer for PNG saving
-        mock_visualizer = Mock()
+        # Mock matplotlib for PNG saving
         mock_fig = Mock()
-        mock_visualizer.plot_parameter.return_value = mock_fig
-        mock_visualizer_class.return_value = mock_visualizer
+        mock_ax = Mock()
+        mock_subplots.return_value = (mock_fig, mock_ax)
+        mock_im = Mock()
+        mock_ax.imshow.return_value = mock_im
 
         output_dir = Path(self.temp_dir) / "output"
 
@@ -337,112 +316,6 @@ class TestImageInversionResultFileIO:
 
         # Verify directory was created
         assert output_dir.exists()
-
-
-class TestResultVisualizer:
-    """Test ResultVisualizer functionality."""
-
-    def setup_method(self):
-        """Set up test fixtures."""
-        # Create sample results
-        height, width = 30, 30
-        results = {
-            'depth': np.random.uniform(0.5, 20.0, (height, width)),
-            'chl': np.random.uniform(0.1, 10.0, (height, width)),
-            'error': np.random.uniform(0.001, 0.1, (height, width))
-        }
-
-        self.result = ImageInversionResult(
-            results,
-            {'width': width, 'height': height},
-            {},
-            "test.tif"
-        )
-
-        self.visualizer = ResultVisualizer(self.result)
-
-    def test_initialization(self):
-        """Test visualizer initialization."""
-        assert self.visualizer.result is self.result
-        assert isinstance(self.visualizer.parameter_cmaps, dict)
-
-        # Check default colormaps
-        assert 'depth' in self.visualizer.parameter_cmaps
-        assert 'chl' in self.visualizer.parameter_cmaps
-        assert 'error' in self.visualizer.parameter_cmaps
-
-    @patch('matplotlib.pyplot.subplots')
-    @patch('matplotlib.pyplot.colorbar')
-    @patch('matplotlib.pyplot.tight_layout')
-    def test_plot_parameter(self, mock_tight_layout, mock_colorbar, mock_subplots):
-        """Test individual parameter plotting."""
-        # Mock matplotlib components
-        mock_fig = Mock()
-        mock_ax = Mock()
-        mock_subplots.return_value = (mock_fig, mock_ax)
-
-        mock_im = Mock()
-        mock_ax.imshow.return_value = mock_im
-
-        fig = self.visualizer.plot_parameter('depth', figsize=(10, 6))
-
-        assert fig is mock_fig
-        mock_subplots.assert_called_once_with(figsize=(10, 6))
-        mock_ax.imshow.assert_called_once()
-        mock_ax.set_title.assert_called_once()
-        mock_ax.set_xlabel.assert_called_once_with('Column')
-        mock_ax.set_ylabel.assert_called_once_with('Row')
-        mock_colorbar.assert_called_once_with(mock_im, ax=mock_ax)
-
-    @patch('matplotlib.pyplot.colorbar')
-    def test_plot_parameter_on_axis(self, mock_colorbar):
-        """Test plotting parameter on existing axis."""
-        mock_ax = Mock()
-        mock_im = Mock()
-        mock_ax.imshow.return_value = mock_im
-
-        self.visualizer._plot_parameter_on_axis(mock_ax, 'depth')
-
-        mock_ax.imshow.assert_called_once()
-        mock_ax.set_title.assert_called_once()
-        mock_ax.set_xlabel.assert_called_once_with('Column')
-        mock_ax.set_ylabel.assert_called_once_with('Row')
-        mock_colorbar.assert_called_once()
-
-    def test_get_parameter_title(self):
-        """Test parameter title formatting."""
-        assert self.visualizer._get_parameter_title('depth') == 'Water Depth'
-        assert self.visualizer._get_parameter_title('chl') == 'Chlorophyll Concentration'
-        assert self.visualizer._get_parameter_title('cdom') == 'CDOM Absorption'
-        assert self.visualizer._get_parameter_title('custom_param') == 'Custom Param'
-
-    def test_get_parameter_units(self):
-        """Test parameter units formatting."""
-        assert self.visualizer._get_parameter_units('depth') == 'meters (m)'
-        assert self.visualizer._get_parameter_units('chl') == 'mg/m³'
-        assert self.visualizer._get_parameter_units('cdom') == '1/m'
-        assert self.visualizer._get_parameter_units('nap') == 'mg/L'
-        assert self.visualizer._get_parameter_units('error') == 'RMSE'
-        assert self.visualizer._get_parameter_units('unknown') == ''
-
-    @patch('matplotlib.pyplot.subplots')
-    @patch('matplotlib.pyplot.colorbar')
-    @patch('matplotlib.pyplot.tight_layout')
-    def test_colormap_selection(self, mock_tight_layout, mock_colorbar, mock_subplots):
-        """Test automatic colormap selection."""
-        mock_fig, mock_ax = Mock(), Mock()
-        mock_subplots.return_value = (mock_fig, mock_ax)
-
-        # Test with auto colormap
-        self.visualizer.plot_parameter('depth', colormap='auto')
-        mock_ax.imshow.assert_called()
-
-        # Reset mock
-        mock_ax.reset_mock()
-
-        # Test with custom colormap
-        self.visualizer.plot_parameter('depth', colormap='plasma')
-        mock_ax.imshow.assert_called()
 
 
 class TestResultsIntegration:
