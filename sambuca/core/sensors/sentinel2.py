@@ -1,39 +1,50 @@
-from typing import Dict, List
+"""Band enums for satellite sensors."""
 
-from .base import BaseSensor
+from enum import Enum
+from typing import NamedTuple
 
 
-class Sentinel2Sensor(BaseSensor):
-    """Sentinel-2 MSI sensor configuration."""
+class BandInfo(NamedTuple):
+    """Band information tuple."""
+    wavelength: float
+    description: str
+    resolution: int = 10  # Default resolution in meters
+
+
+class S2(Enum):
+    """Sentinel-2 MSI bands with enhanced metadata."""
+
+    # Wavelengths from your current system
+    B01 = BandInfo(442.7, "Coastal aerosol", 60)
+    B02 = BandInfo(492.4, "Blue", 10)
+    B03 = BandInfo(559.8, "Green", 10)
+    B04 = BandInfo(664.6, "Red", 10)
+    B05 = BandInfo(704.1, "Vegetation red edge", 20)
+    B06 = BandInfo(740.5, "Vegetation red edge", 20)
+    B07 = BandInfo(782.8, "Vegetation red edge", 20)
+    B08 = BandInfo(832.8, "NIR", 10)
+    B8A = BandInfo(864.7, "Narrow NIR", 20)
+    B09 = BandInfo(945.1, "Water vapour", 60)
+    B10 = BandInfo(1373.5, "SWIR - Cirrus", 60)
+    B11 = BandInfo(1613.7, "SWIR", 20)
+    B12 = BandInfo(2202.4, "SWIR", 20)
 
     @property
-    def name(self) -> str:
-        return "Sentinel-2"
+    def wavelength(self) -> float:
+        """Central wavelength in nanometers."""
+        return self.value.wavelength
 
     @property
-    def band_wavelengths(self) -> Dict[str, float]:
-        return {
-            "B1": 442.7,  # Coastal aerosol
-            "B2": 492.4,  # Blue
-            "B3": 559.8,  # Green
-            "B4": 664.6,  # Red
-            "B5": 704.1,  # Vegetation red edge
-            "B6": 740.5,  # Vegetation red edge
-            "B7": 782.8,  # Vegetation red edge
-            "B8": 832.8,  # NIR
-            "B8A": 864.7,  # Narrow NIR
-            "B9": 945.1,  # Water vapour
-            "B10": 1373.5,  # SWIR - Cirrus
-            "B11": 1613.7,  # SWIR
-            "B12": 2202.4  # SWIR
-        }
+    def description(self) -> str:
+        """Band description."""
+        return self.value.description
 
     @property
-    def standard_band_sets(self) -> Dict[str, List[str]]:
-        return {
-            'visible': ['B2', 'B3', 'B4'],
-            'bathymetry': ['B2', 'B3', 'B4', 'B5'],
-            'water_quality': ['B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'],
-            'full_optical': ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B8A'],
-            'default': ['B2', 'B3', 'B4', 'B5']
-        }
+    def resolution(self) -> int:
+        """Spatial resolution in meters."""
+        return self.value.resolution
+
+    @property
+    def band_name(self) -> str:
+        """Band name (e.g., 'B02')."""
+        return self.name

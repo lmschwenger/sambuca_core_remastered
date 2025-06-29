@@ -45,7 +45,6 @@ class TestWorkflows:
         assert workflow.sensor_name == 'sentinel2'
         assert hasattr(workflow, 'inversion_params')
         assert hasattr(workflow, 'siop_manager')
-        assert hasattr(workflow, 'sensor')
 
     def test_bathymetry_workflow_customization(self):
         """Test parameter customization in workflow."""

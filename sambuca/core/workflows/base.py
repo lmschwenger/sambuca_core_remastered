@@ -26,11 +26,9 @@ class BaseWorkflow(ABC):
 
     def _setup_components(self):
         """Initialize common components."""
-        from ..sensors import SensorFactory
         from ..siop_manager import SIOPManager
         from ..io import RasterImageLoader
 
-        self.sensor = SensorFactory.create(self.sensor_name)
         self.siop_manager = SIOPManager(str(self.siop_dir))
         self.image_loader = RasterImageLoader()
 

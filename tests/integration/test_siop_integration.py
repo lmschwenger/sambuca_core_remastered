@@ -10,7 +10,6 @@ import pandas as pd
 
 import sambuca.core as sbc
 from sambuca.core.inversion import InversionParameters
-from sambuca.core.sensors import SensorFactory, Sentinel2Sensor
 
 
 class TestSIOPIntegration(unittest.TestCase):
@@ -121,26 +120,6 @@ class TestSIOPIntegration(unittest.TestCase):
             self.assertIn(lib, libraries, f"Should load {lib}")
 
         print(f" Loaded {len(libraries)} SIOP libraries")
-
-    def test_sensor_configurations(self):
-        """Test built-in sensor configurations."""
-        # Test Sentinel-2 sensor
-        s2_sensor = SensorFactory.create('sentinel2')
-        self.assertIsInstance(s2_sensor, Sentinel2Sensor)
-        self.assertEqual(s2_sensor.name, "Sentinel-2")
-
-        # Check wavelengths
-        wavelengths = s2_sensor.band_wavelengths
-        self.assertIn('B2', wavelengths)
-        self.assertIn('B3', wavelengths)
-        self.assertIn('B4', wavelengths)
-
-        # Check standard configurations
-        bands, wls = s2_sensor.get_standard_config('bathymetry')
-        self.assertEqual(len(bands), len(wls))
-        self.assertIn('B2', bands)
-
-        print(f" Sentinel-2 sensor: {len(wavelengths)} bands, bathymetry config: {len(bands)} bands")
 
     def test_sensor_registration_and_interpolation(self):
         """Test sensor registration and SIOP interpolation."""
@@ -360,10 +339,6 @@ class TestSIOPIntegration(unittest.TestCase):
 
         with self.assertRaises(KeyError):
             siop_manager.get_standard_siops("NonexistentSensor")
-
-        # Test invalid sensor creation
-        with self.assertRaises(ValueError):
-            SensorFactory.create('unknown_sensor')
 
         print(" Error handling tests passed")
 
