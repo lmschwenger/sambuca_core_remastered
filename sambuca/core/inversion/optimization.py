@@ -10,7 +10,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy import optimize
 
-from .objective_functions import spectral_rmse_with_nedr
+from .objective_functions import SpectralRMSEWithNEDR, ObjectiveFunction
 from .optimization_result import OptimizationResult
 from .parameters import InversionParameters
 from ..forward_model import forward_model
@@ -19,7 +19,7 @@ from ..forward_model import forward_model
 def invert_spectrum(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse_with_nedr,
+        objective_function: ObjectiveFunction = None,
         initial_values: Optional[List[float]] = None,
         method: str = 'L-BFGS-B',
         options: Optional[Dict[str, Any]] = None,
@@ -29,7 +29,7 @@ def invert_spectrum(
     Args:
         observed_rrs: Observed remote sensing reflectance.
         inversion_parameters: Parameters for the inversion process.
-        objective_function: Function to calculate the error.
+        objective_function: ObjectiveFunction instance to calculate the error.
         initial_values: Starting values for optimization (defaults to midpoint of bounds).
         method: Optimization method (see scipy.optimize.minimize).
         options: Additional options for the optimizer.
@@ -47,6 +47,10 @@ def invert_spectrum(
     if not bounds:
         raise ValueError("No parameters specified for inversion")
 
+    # Set default objective function if not provided
+    if objective_function is None:
+        objective_function = SpectralRMSEWithNEDR()
+
     # Set default initial values to midpoint of bounds if not provided
     if initial_values is None:
         initial_values = inversion_parameters.get_initial_values()
@@ -57,11 +61,7 @@ def invert_spectrum(
 
     # Objective function wrapper
     def objective(x):
-        # Pass NEDR if available in inversion_parameters
-        if hasattr(inversion_parameters, 'nedr') and inversion_parameters.nedr is not None:
-            return objective_function(x, observed_rrs, inversion_parameters, nedr=inversion_parameters.nedr)
-        else:
-            return objective_function(x, observed_rrs, inversion_parameters)
+        return objective_function(x, observed_rrs, inversion_parameters)
 
     low_relax = 0.7
     high_relax = 1.3
@@ -108,7 +108,7 @@ def invert_spectrum(
 def multi_start_inversion(
         observed_rrs: NDArray[np.float64],
         inversion_parameters: InversionParameters,
-        objective_function: Callable = spectral_rmse_with_nedr,
+        objective_function: ObjectiveFunction = None,
         n_starts: int = 5,
         initial_values: Optional[List[float]] = None,
         method: str = 'L-BFGS-B',
@@ -122,7 +122,7 @@ def multi_start_inversion(
     Args:
         observed_rrs: Observed remote sensing reflectance.
         inversion_parameters: Parameters for the inversion process.
-        objective_function: Function to calculate the error.
+        objective_function: ObjectiveFunction instance to calculate the error.
         n_starts: Number of different starting points to try.
         initial_values: Optional starting point to include among the random starts.
         method: Optimization method (see scipy.optimize.minimize).
@@ -136,6 +136,10 @@ def multi_start_inversion(
 
     if not bounds:
         raise ValueError("No parameters specified for inversion")
+
+    # Set default objective function if not provided
+    if objective_function is None:
+        objective_function = SpectralRMSEWithNEDR()
 
     best_result = None
     best_error = float('inf')
