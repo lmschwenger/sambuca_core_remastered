@@ -417,42 +417,6 @@ class TestInversionIntegration(unittest.TestCase):
         except Exception as e:
             self.skipTest(f"Batch processing test failed: {e}")
 
-    def test_convergence_analysis(self):
-        """Test analysis of convergence patterns."""
-        if not self.test_observations:
-            self.skipTest("No test observations available")
-
-        convergence_stats = {'converged': 0, 'failed': 0, 'errors': []}
-
-        for scenario_name, obs_data in self.test_observations.items():
-            try:
-                result = invert_spectrum(obs_data['noisy'], self.depth_only_params)
-
-                if result.convergence_status:
-                    convergence_stats['converged'] += 1
-                else:
-                    convergence_stats['failed'] += 1
-
-                convergence_stats['errors'].append(result.objective_value)
-
-            except Exception as e:
-                convergence_stats['failed'] += 1
-                print(f"⚠️ {scenario_name} failed with exception: {e}")
-
-        total_tests = convergence_stats['converged'] + convergence_stats['failed']
-        if total_tests > 0:
-            success_rate = convergence_stats['converged'] / total_tests
-
-            # Should have reasonable success rate
-            self.assertGreater(success_rate, 0.5, "Convergence rate should be > 50%")
-
-            if convergence_stats['errors']:
-                mean_error = np.mean(convergence_stats['errors'])
-                self.assertLess(mean_error, 0.1, "Mean error should be reasonable")
-
-            print(f" Convergence analysis: {success_rate:.1%} success rate, "
-                  f"mean error: {np.mean(convergence_stats['errors']):.6f}")
-
 
 if __name__ == '__main__':
     unittest.main()

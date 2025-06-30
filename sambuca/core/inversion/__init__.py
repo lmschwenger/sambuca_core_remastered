@@ -18,7 +18,7 @@ from .objective_functions import (
 from .optimization import invert_spectrum, multi_start_inversion
 from .optimization_result import OptimizationResult
 from .lut import LookUpTable
-from .pixel_processor import process_pixel, process_image, batch_process_image
+from .pixel_processor import process_pixel, process_image
 
 __all__ = [
     'InversionParameters',
@@ -34,6 +34,5 @@ __all__ = [
     'LookUpTable',
     'process_pixel',
     'process_image',
-    'batch_process_image',
     'multi_start_inversion'
 ]
