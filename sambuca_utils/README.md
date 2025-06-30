@@ -1,14 +1,18 @@
 # SAMBUCA Utils
 
-Utility package for SAMBUCA with data fetching capabilities.
+Utility package for SAMBUCA with data fetching, I/O, and visualization capabilities.
 
 ## Overview
 
-This package provides data fetching utilities for the SAMBUCA ecosystem, including support for downloading satellite data from various sources like Sentinel-3 OLCI.
+This package provides comprehensive utilities for the SAMBUCA ecosystem, including:
+- **Data fetching** from satellite sources like Sentinel-3 OLCI
+- **Image I/O and preprocessing** for raster data
+- **Professional visualization** tools for analysis results
 
 ## Features
 
 - **Sentinel-3 OLCI Data Fetching**: Download water quality parameters (chlorophyll, suspended matter, CDOM) from Copernicus Marine Service
+- **Image I/O and Preprocessing**: Load, preprocess, and handle raster data with support for multiple formats
 - **Professional Visualization**: Advanced plotting and visualization tools for SAMBUCA inversion results
 - **Flexible AOI Support**: Bounding boxes, WKT polygons, or shapefiles
 - **Multiple Data Sources**: Automatic fallback between different dataset versions
@@ -76,6 +80,91 @@ For Copernicus Marine Service data, set environment variables:
 export COP_MARINE_USER="your_username"
 export COP_MARINE_PASS="your_password"
 ```
+
+### Image I/O and Preprocessing
+
+Load and preprocess raster images for SAMBUCA analysis:
+
+```python
+from sambuca_utils.io import RasterImageLoader, ImagePreprocessor
+
+# Create image loader with preprocessing options
+loader = RasterImageLoader(
+    auto_scale=True,           # Automatic scaling to reflectance
+    convert_to_rrs=True,       # Convert to remote sensing reflectance
+    handle_nodata=True,        # Handle no-data values
+    bands_last=True            # Output format (H, W, C)
+)
+
+# Load satellite image
+image_data = loader.load(
+    'path/to/satellite_image.tif', 
+    bands=[2, 3, 4, 8]  # Select specific bands
+)
+
+# Basic preprocessing
+water_mask = ImagePreprocessor.apply_water_mask(image_data)
+rgb_preview = ImagePreprocessor.create_rgb_preview(
+    image_data, 
+    rgb_bands=(2, 1, 0)  # NIR, Red, Green
+)
+
+# Extract spectra for analysis
+pixel_spectrum = ImagePreprocessor.extract_pixel_spectrum(
+    image_data, y=100, x=150
+)
+
+print(f"Image shape: {image_data.shape}")
+print(f"Water pixels: {water_mask.sum()} of {water_mask.size}")
+print(f"Sample spectrum: {pixel_spectrum}")
+```
+
+### Advanced Image Processing
+
+```python
+# Load with custom preprocessing
+loader = RasterImageLoader(
+    auto_scale=False,          # Keep original values
+    bands_last=False,          # Bands-first format (C, H, W)
+    handle_nodata=True
+)
+
+image_data = loader.load('multispectral_image.tif')
+
+# Apply water mask from external file
+water_mask = ImagePreprocessor.apply_water_mask(
+    image_data,
+    mask_path='water_mask.tif',
+    mask_threshold=0.5
+)
+
+# Create publication-quality RGB
+rgb = ImagePreprocessor.create_rgb_preview(
+    image_data,
+    rgb_bands=(3, 2, 1),
+    stretch_percentiles=(1, 99)  # Enhanced contrast
+)
+
+# Process multiple pixels
+valid_coords = np.where(water_mask)
+spectra = []
+for y, x in zip(valid_coords[0][:100], valid_coords[1][:100]):
+    spectrum = ImagePreprocessor.extract_pixel_spectrum(image_data, y, x)
+    spectra.append(spectrum)
+
+spectra_array = np.array(spectra)
+print(f"Collected {len(spectra)} water pixel spectra")
+```
+
+## Examples
+
+See the `examples/` directory for comprehensive demonstrations:
+
+- **`data_fetching_example.py`** - Satellite data acquisition from Copernicus Marine
+- **`image_io_example.py`** - Professional image loading and preprocessing  
+- **`complete_workflow_example.py`** - End-to-end data pipeline workflow
+
+Each example includes detailed documentation and error handling.
 
 ### Result Visualization
 
@@ -147,6 +236,7 @@ mypy sambuca_utils/
 - Python >= 3.8
 - numpy >= 1.20.0
 - matplotlib >= 3.5.0
+- scikit-image >= 0.19.0
 - copernicusmarine >= 1.0.0
 - xarray >= 0.20.0
 - rasterio >= 1.2.0
@@ -158,6 +248,7 @@ mypy sambuca_utils/
 ### Module Dependencies
 
 - **Data Fetching**: copernicusmarine, xarray, rasterio, geopandas, shapely
+- **Image I/O**: rasterio, scikit-image, numpy
 - **Visualization**: matplotlib, numpy
 - **Core Utilities**: pandas, scipy
 

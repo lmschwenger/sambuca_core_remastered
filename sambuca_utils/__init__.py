@@ -11,5 +11,6 @@ __email__ = "lasse.m.schwenger@gmail.com"
 # Import main utility modules for convenience
 from . import data_fetchers
 from . import visualization
+from . import io
 
-__all__ = ["data_fetchers", "visualization"]
+__all__ = ["data_fetchers", "visualization", "io"]

@@ -5,7 +5,7 @@ import numpy as np
 
 from .base import BaseWorkflow
 from ..inversion import InversionParameters, process_image
-from ..io import ImagePreprocessor
+from sambuca_utils.io import ImagePreprocessor
 from ..results import ImageInversionResult
 
 

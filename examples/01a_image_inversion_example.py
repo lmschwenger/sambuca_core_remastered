@@ -4,7 +4,9 @@ Bathymetry Processing Example
 """
 import os
 
+from sambuca.core.sensors import S2
 from sambuca.core.workflows import BathymetryWorkflow
+from sambuca_utils.visualization import ResultVisualizer
 from pathlib import Path
 
 
@@ -27,7 +29,7 @@ def main():
         fixed_substrate_fraction=1,
     )
 
-    workflow.wavelengths = [492.4, 559.8, 664.6, 704.1]
+    workflow.wavelengths = [S2.B02.wavelength, S2.B03.wavelength, S2.B04.wavelength, S2.B05.wavelength]
     workflow.bands = [2, 3, 4, 5]
 
     # Process entire image - one line!
@@ -41,7 +43,12 @@ def main():
     # Analysis and visualization - also one line each!
     result.print_summary()
     os.makedirs(output_dir, exist_ok=True)
-    result.plot_summary(save_path=str(output_dir / "summary.png"))
+    
+    # Create visualizer and plot summary
+    viz = ResultVisualizer(result)
+    summary_fig = viz.create_summary_plot(figsize=(15, 10))
+    summary_fig.savefig(str(output_dir / "summary.png"), dpi=300, bbox_inches='tight')
+    
     result.save_all_parameters(str(output_dir), formats=['tiff', 'png'])
 
     print(f"\nResults saved to: {output_dir}")

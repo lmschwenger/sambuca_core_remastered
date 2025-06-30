@@ -12,6 +12,7 @@ import numpy as np
 from sambuca.core.workflows import BathymetryWorkflow
 from sambuca.core.inversion import LookUpTable, process_image
 from sambuca.core.sensors import S2
+from sambuca_utils.visualization import ResultVisualizer
 
 
 def main():
@@ -93,7 +94,11 @@ def main():
     )
 
     result_obj.save_all_parameters(str(output_dir), formats=['tiff'])
-    result_obj.plot_summary(save_path=str(output_dir / "bathymetry_lut.png"))
+    
+    # Create visualizer and plot summary
+    viz = ResultVisualizer(result_obj)
+    summary_fig = viz.create_summary_plot(figsize=(15, 10))
+    summary_fig.savefig(str(output_dir / "bathymetry_lut.png"), dpi=300, bbox_inches='tight')
 
     print(f"\nResults saved to: {output_dir}")
     print(f"Total processing time: {build_time + process_time:.1f} seconds")
