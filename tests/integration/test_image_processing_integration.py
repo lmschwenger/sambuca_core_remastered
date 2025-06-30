@@ -12,7 +12,7 @@ import rasterio
 
 from sambuca.core import SIOPManager
 from sambuca.core.inversion import InversionParameters, process_image
-from sambuca.core.io import RasterImageLoader, ImagePreprocessor
+from sambuca_utils.io import RasterImageLoader, ImagePreprocessor
 
 
 class TestImageProcessingIntegration(unittest.TestCase):

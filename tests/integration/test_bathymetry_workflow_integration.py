@@ -12,6 +12,14 @@ import pytest
 
 from sambuca.core.workflows import BathymetryWorkflow
 
+# Check if sambuca_utils is available
+try:
+    import sambuca_utils
+    SAMBUCA_UTILS_AVAILABLE = True
+except ImportError:
+    SAMBUCA_UTILS_AVAILABLE = False
+    sambuca_utils = None
+
 
 class TestBathymetryWorkflowIntegration(unittest.TestCase):
     """Integration tests for the bathymetry workflow."""
@@ -192,7 +200,10 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
             print(f"⚠️ Pixel processing issue: {e}")
 
     def test_workflow_preview_functionality(self):
-        """Test RGB preview generation."""
+        """Test RGB preview generation (requires sambuca_utils)."""
+        if not SAMBUCA_UTILS_AVAILABLE:
+            self.skipTest("sambuca_utils not available - skipping RGB preview test")
+            
         if not self.test_image_path:
             self.skipTest("No test image available")
 
@@ -200,11 +211,11 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
 
         try:
             # Test RGB preview creation (without display)
-            # This mainly tests the image loading and preprocessing
             loader = workflow.image_loader
             image_data = loader.load(self.test_image_path)
 
-            from sambuca.core.io import ImagePreprocessor
+            # Import from sambuca_utils
+            from sambuca_utils.io import ImagePreprocessor
             rgb = ImagePreprocessor.create_rgb_preview(image_data)
 
             # Check RGB output
@@ -247,6 +258,7 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
         self.assertEqual(workflow.inversion_params.fixed_cdom, 0.2)
         self.assertEqual(workflow.inversion_params.fixed_nap, 1.0)
 
+    @unittest.skipUnless(SAMBUCA_UTILS_AVAILABLE, "sambuca_utils not available")
     def test_quick_preview_integration_with_mock_data(self):
         """Integration test using actual matplotlib but with mocked data."""
         import matplotlib
@@ -254,13 +266,20 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
 
         workflow = BathymetryWorkflow(self.siop_dir, sensor='sentinel2')
 
-        # Create realistic mock data
-        mock_data = np.random.rand(50, 50, 4) * 1000  # Simulate satellite bands
+        # Create realistic mock data structure that matches what RasterImageLoader returns
+        class MockImageData:
+            def __init__(self):
+                self.data = np.random.rand(50, 50, 4) * 1000
+                self.shape = (50, 50, 4)
+                self.is_bands_last = True
+                
+        mock_image_data = MockImageData()
         mock_rgb = np.random.rand(50, 50, 3)
 
-        workflow.image_loader.load = Mock(return_value=mock_data)
+        workflow.image_loader.load = Mock(return_value=mock_image_data)
 
-        with patch('sambuca.core.io.ImagePreprocessor.create_rgb_preview',
+        # Mock the ImagePreprocessor at the module level
+        with patch('sambuca_utils.io.ImagePreprocessor.create_rgb_preview',
                    return_value=mock_rgb) as mock_create_rgb:
             # Test both cases - this verifies the method runs end-to-end
             workflow.quick_preview(self.test_image_path)
@@ -268,7 +287,7 @@ class TestBathymetryWorkflowIntegration(unittest.TestCase):
 
             # Verify preprocessing was called correctly
             self.assertEqual(mock_create_rgb.call_count, 2)
-            mock_create_rgb.assert_called_with(mock_data)
+            mock_create_rgb.assert_called_with(mock_image_data)
 
 
 if __name__ == '__main__':

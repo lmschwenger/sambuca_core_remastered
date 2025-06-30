@@ -28,6 +28,7 @@ else:
         "scipy>=1.7.0",
         "pandas>=1.3.0",
         "matplotlib>=3.5.0",
+        "sambuca-utils>=0.1.0",
     ]
 
 # GUI-specific requirements
