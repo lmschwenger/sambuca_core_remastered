@@ -26,7 +26,7 @@ class BaseWorkflow(ABC):
 
     def _setup_components(self):
         """Initialize common components."""
-        from ..siop_manager import SIOPManager
+        from sambuca.core.siop_manager import SIOPManager
         from sambuca_utils.io import RasterImageLoader
 
         self.siop_manager = SIOPManager(str(self.siop_dir))

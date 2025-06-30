@@ -10,7 +10,7 @@ from typing import Dict, Callable, Any
 
 from sambuca.core.inversion import LookUpTable, process_image
 from sambuca.core.results import ImageInversionResult
-from sambuca.core.workflows import BathymetryWorkflow
+from sambuca_utils.workflows import BathymetryWorkflow
 
 # Sensor definitions - centralized for easy access
 SENSOR_DEFINITIONS = {

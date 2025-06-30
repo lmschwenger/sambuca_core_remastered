@@ -4,9 +4,9 @@ from typing import Optional, Dict, Any, Tuple
 import numpy as np
 
 from .base import BaseWorkflow
-from ..inversion import InversionParameters, process_image
+from sambuca.core.inversion import InversionParameters, process_image
 from sambuca_utils.io import ImagePreprocessor
-from ..results import ImageInversionResult
+from sambuca.core.results import ImageInversionResult
 
 
 class BathymetryWorkflow(BaseWorkflow):
@@ -184,7 +184,7 @@ class BathymetryWorkflow(BaseWorkflow):
         Returns:
             Dictionary with inversion results and fit quality
         """
-        from ..inversion import invert_spectrum
+        from sambuca.core.inversion import invert_spectrum
         import matplotlib.pyplot as plt
 
         # Load image
