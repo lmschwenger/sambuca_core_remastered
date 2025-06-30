@@ -9,11 +9,16 @@ import pytest
 
 from sambuca.core.inversion.lut import LookUpTable
 from sambuca.core.inversion.objective_functions import (
-    spectral_rmse,
-    spectral_angle_mapper,
-    spectral_relative_rmse,
-    spectral_chi_square,
-    spectral_rmse_with_nedr
+    SpectralRMSE,
+    SpectralAngleMapper,
+    SpectralRelativeRMSE,
+    SpectralChiSquare,
+    SpectralRMSEWithNEDR,
+    create_rmse,
+    create_angle_mapper,
+    create_relative_rmse,
+    create_chi_square,
+    create_rmse_with_nedr
 )
 from sambuca.core.inversion.optimization import invert_spectrum, multi_start_inversion
 from sambuca.core.inversion.optimization_result import OptimizationResult
@@ -289,22 +294,23 @@ class TestObjectiveFunctions:
             substrate1=[0.1, 0.2, 0.3, 0.4]
         )
 
-    @patch('sambuca.core.inversion.objective_functions.forward_model')
+    @patch('sambuca.core.inversion.objective_functions.base.forward_model')
     def test_spectral_rmse_basic(self, mock_forward_model):
         """Test basic RMSE calculation."""
         mock_result = Mock()
         mock_result.rrs = np.array([0.04, 0.09, 0.065, 0.025])
         mock_forward_model.return_value = mock_result
 
-        # Test RMSE calculation
+        # Test RMSE calculation using class-based API
+        rmse_func = SpectralRMSE()
         x = [2.0]  # chl value
-        error = spectral_rmse(x, self.observed_rrs, self.params)
+        error = rmse_func(x, self.observed_rrs, self.params)
 
         assert isinstance(error, (float, np.floating))
         assert error >= 0
         mock_forward_model.assert_called_once()
 
-    @patch('sambuca.core.inversion.objective_functions.forward_model')
+    @patch('sambuca.core.inversion.objective_functions.base.forward_model')
     def test_spectral_rmse_with_weights(self, mock_forward_model):
         """Test RMSE calculation with error weights."""
         mock_result = Mock()
@@ -314,12 +320,13 @@ class TestObjectiveFunctions:
         x = [2.0]
         weights = np.array([1.0, 2.0, 1.5, 0.5])
 
-        error = spectral_rmse(x, self.observed_rrs, self.params, error_weight=weights)
+        rmse_func = SpectralRMSE(error_weight=weights)
+        error = rmse_func(x, self.observed_rrs, self.params)
 
         assert isinstance(error, (float, np.floating))
         assert error >= 0
 
-    @patch('sambuca.core.inversion.objective_functions.forward_model')
+    @patch('sambuca.core.inversion.objective_functions.base.forward_model')
     def test_spectral_rmse_return_modeled_spectra(self, mock_forward_model):
         """Test RMSE calculation returning modeled spectra."""
         mock_result = Mock()
@@ -327,14 +334,15 @@ class TestObjectiveFunctions:
         mock_forward_model.return_value = mock_result
 
         x = [2.0]
-        result = spectral_rmse(x, self.observed_rrs, self.params, return_modeled_spectra=True)
+        rmse_func = SpectralRMSE()
+        result = rmse_func(x, self.observed_rrs, self.params, return_modeled_spectra=True)
 
         assert isinstance(result, dict)
         assert 'error' in result
         assert 'modeled_spectra' in result
         assert 'forward_model_results' in result
 
-    @patch('sambuca.core.inversion.objective_functions.forward_model')
+    @patch('sambuca.core.inversion.objective_functions.base.forward_model')
     def test_spectral_angle_mapper(self, mock_forward_model):
         """Test Spectral Angle Mapper calculation."""
         mock_result = Mock()
@@ -342,12 +350,13 @@ class TestObjectiveFunctions:
         mock_forward_model.return_value = mock_result
 
         x = [2.0]
-        angle = spectral_angle_mapper(x, self.observed_rrs, self.params)
+        sam_func = SpectralAngleMapper()
+        angle = sam_func(x, self.observed_rrs, self.params)
 
         assert isinstance(angle, (float, np.floating))
         assert 0 <= angle <= np.pi
 
-    @patch('sambuca.core.inversion.objective_functions.forward_model')
+    @patch('sambuca.core.inversion.objective_functions.base.forward_model')
     def test_spectral_angle_mapper_identical_spectra(self, mock_forward_model):
         """Test SAM with identical spectra should give zero angle."""
         mock_result = Mock()
@@ -355,11 +364,12 @@ class TestObjectiveFunctions:
         mock_forward_model.return_value = mock_result
 
         x = [2.0]
-        angle = spectral_angle_mapper(x, self.observed_rrs, self.params)
+        sam_func = SpectralAngleMapper()
+        angle = sam_func(x, self.observed_rrs, self.params)
 
         assert np.isclose(angle, 0.0, atol=1e-10)
 
-    @patch('sambuca.core.inversion.objective_functions.forward_model')
+    @patch('sambuca.core.inversion.objective_functions.base.forward_model')
     def test_spectral_relative_rmse(self, mock_forward_model):
         """Test relative RMSE calculation."""
         mock_result = Mock()
@@ -367,12 +377,13 @@ class TestObjectiveFunctions:
         mock_forward_model.return_value = mock_result
 
         x = [2.0]
-        error = spectral_relative_rmse(x, self.observed_rrs, self.params)
+        rel_rmse_func = SpectralRelativeRMSE()
+        error = rel_rmse_func(x, self.observed_rrs, self.params)
 
         assert isinstance(error, (float, np.floating))
         assert error >= 0
 
-    @patch('sambuca.core.inversion.objective_functions.forward_model')
+    @patch('sambuca.core.inversion.objective_functions.base.forward_model')
     def test_spectral_chi_square(self, mock_forward_model):
         """Test chi-square calculation."""
         mock_result = Mock()
@@ -380,12 +391,13 @@ class TestObjectiveFunctions:
         mock_forward_model.return_value = mock_result
 
         x = [2.0]
-        chi_square = spectral_chi_square(x, self.observed_rrs, self.params)
+        chi_square_func = SpectralChiSquare()
+        chi_square = chi_square_func(x, self.observed_rrs, self.params)
 
         assert isinstance(chi_square, (float, np.floating))
         assert chi_square >= 0
 
-    @patch('sambuca.core.inversion.objective_functions.forward_model')
+    @patch('sambuca.core.inversion.objective_functions.base.forward_model')
     def test_spectral_rmse_with_nedr(self, mock_forward_model):
         """Test RMSE calculation with NEDR weighting."""
         mock_result = Mock()
@@ -395,10 +407,29 @@ class TestObjectiveFunctions:
         x = [2.0]
         nedr = np.array([0.002, 0.003, 0.002, 0.001])
 
-        error = spectral_rmse_with_nedr(x, self.observed_rrs, self.params, nedr=nedr)
+        rmse_nedr_func = SpectralRMSEWithNEDR(nedr=nedr)
+        error = rmse_nedr_func(x, self.observed_rrs, self.params)
 
         assert isinstance(error, (float, np.floating))
         assert error >= 0
+
+    def test_convenience_factory_functions(self):
+        """Test convenience factory functions."""
+        # Test that factory functions create the right instances
+        rmse = create_rmse()
+        assert isinstance(rmse, SpectralRMSE)
+        
+        sam = create_angle_mapper()
+        assert isinstance(sam, SpectralAngleMapper)
+        
+        rel_rmse = create_relative_rmse()
+        assert isinstance(rel_rmse, SpectralRelativeRMSE)
+        
+        chi_square = create_chi_square()
+        assert isinstance(chi_square, SpectralChiSquare)
+        
+        rmse_nedr = create_rmse_with_nedr()
+        assert isinstance(rmse_nedr, SpectralRMSEWithNEDR)
 
 
 class TestOptimizationResult:
@@ -754,19 +785,25 @@ class TestInversionIntegration:
         observed_rrs = np.array([0.05, 0.08, 0.06, 0.03])
         x = [2.0]  # chl value
 
-        with patch('sambuca.core.inversion.objective_functions.forward_model') as mock_fm:
-            # Mock forward model to return consistent results
-            mock_result = Mock()
-            mock_result.rrs = np.array([0.05, 0.08, 0.06, 0.03])  # Perfect match
-            mock_fm.return_value = mock_result
+        # Test different objective functions using class-based API
+        rmse_func = SpectralRMSE()
+        sam_func = SpectralAngleMapper()
 
-            # Test different objective functions
-            rmse = spectral_rmse(x, observed_rrs, params)
-            sam = spectral_angle_mapper(x, observed_rrs, params)
+        with patch('sambuca.core.inversion.objective_functions.base.forward_model') as mock_fm_rmse:
+            with patch('sambuca.core.inversion.objective_functions.base.forward_model') as mock_fm_sam:
+                # Mock forward model to return consistent results
+                mock_result = Mock()
+                mock_result.rrs = np.array([0.05, 0.08, 0.06, 0.03])  # Perfect match
+                mock_fm_rmse.return_value = mock_result
+                mock_fm_sam.return_value = mock_result
 
-            # Perfect match should give very small errors
-            assert rmse < 1e-10
-            assert sam < 1e-10  # Should be very small angle
+                # Test different objective functions
+                rmse = rmse_func(x, observed_rrs, params)
+                sam = sam_func(x, observed_rrs, params)
+
+                # Perfect match should give very small errors
+                assert rmse < 1e-10
+                assert sam < 1e-10  # Should be very small angle
 
     def test_error_metric_behavior(self):
         """Test behavior of different error metrics with known data."""
@@ -781,6 +818,11 @@ class TestInversionIntegration:
         observed = np.array([0.05, 0.08, 0.06, 0.03])
         x = [2.0]
 
+        # Create objective function instances
+        rmse_func = SpectralRMSE()
+        sam_func = SpectralAngleMapper()
+        rel_rmse_func = SpectralRelativeRMSE()
+
         # Test with different modeled spectra
         test_cases = [
             ([0.05, 0.08, 0.06, 0.03], "identical"),  # Perfect match
@@ -789,24 +831,25 @@ class TestInversionIntegration:
         ]
 
         for modeled_values, case_name in test_cases:
-            with patch('sambuca.core.inversion.objective_functions.forward_model') as mock_fm:
+            # Use fresh mocks for each test case to avoid state persistence
+            with patch('sambuca.core.inversion.objective_functions.base.forward_model') as mock_fm:
                 mock_result = Mock()
                 mock_result.rrs = np.array(modeled_values)
                 mock_fm.return_value = mock_result
 
-                rmse = spectral_rmse(x, observed, params)
-                sam = spectral_angle_mapper(x, observed, params)
-                rel_rmse = spectral_relative_rmse(x, observed, params)
+                rmse = rmse_func(x, observed, params)
+                sam = sam_func(x, observed, params)
+                rel_rmse = rel_rmse_func(x, observed, params)
 
                 if case_name == "identical":
                     # Perfect match should give zero errors
-                    assert rmse < 1e-10
-                    assert sam < 1e-10
-                    assert rel_rmse < 1e-10
+                    assert rmse < 1e-10, f"RMSE for {case_name}: expected < 1e-10, got {rmse}"
+                    assert sam < 1e-10, f"SAM for {case_name}: expected < 1e-10, got {sam}"
+                    assert rel_rmse < 1e-10, f"Rel RMSE for {case_name}: expected < 1e-10, got {rel_rmse}"
                 elif case_name in ["scaled", "reduced"]:
                     # Scaled versions should have:
                     # - Non-zero RMSE and relative RMSE
                     # - Very small SAM (same spectral shape)
-                    assert rmse > 0
-                    assert rel_rmse > 0
-                    assert sam < 0.2  # Small angle for same shape
+                    assert rmse > 0, f"RMSE for {case_name}: expected > 0, got {rmse}"
+                    assert rel_rmse > 0, f"Rel RMSE for {case_name}: expected > 0, got {rel_rmse}"
+                    assert sam < 0.2, f"SAM for {case_name}: expected < 0.2, got {sam}"  # Small angle for same shape
